@@ -4,7 +4,8 @@
 trusted local configuration with a `roots` array. Each entry declares `alias`, an
 absolute `path`, `source_kind`, `language`, `register`, `rights`, `permissions`, and
 `approval: {by, basis}`. `authorship` defaults to unknown. Optional `max_files` bounds
-the initial inventory; `work_groups` explicitly maps relative locators to work IDs.
+the initial inventory; `include_files` limits a root to named relative files (an empty
+list reads none); `work_groups` explicitly maps relative locators to work IDs.
 Never commit this configuration or the inventory.
 
 Permissions explicitly declare `local_analysis`, `retrieval`, `private_git_excerpt`,

@@ -19,4 +19,4 @@ jobs:
       - run: qg pack build --pack examples/synthetic/common --register essay --public --out out/demo
       - run: qg check --draft examples/synthetic/draft.md --context out/demo/context.json --out out/check.json
       - run: python -m build --no-isolation
-      - run: python scripts/audit_public.py --source . --archive dist/quillgrain-0.1.0rc1-py3-none-any.whl --archive dist/quillgrain-0.1.0rc1.tar.gz
+      - run: python scripts/audit_public.py --source . --archive dist/quillgrain-0.1.0rc2-py3-none-any.whl --archive dist/quillgrain-0.1.0rc2.tar.gz

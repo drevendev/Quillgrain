@@ -73,6 +73,9 @@ def inventory(config, output):
                     skipped["symlink"] = skipped.get("symlink", 0) + 1
                     continue
                 relative = candidate.relative_to(root).as_posix()
+                included = entry.get("include_files")
+                if included is not None and relative not in included:
+                    continue
                 candidate = bounded(root, relative)
                 if found >= entry.get("max_files", 10000):
                     skipped["inventory_limit"] = skipped.get("inventory_limit", 0) + 1
