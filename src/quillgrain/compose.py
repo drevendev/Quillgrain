@@ -136,7 +136,7 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
                     raise QGError("OVERRIDE_TARGET_UNAVAILABLE", 3)
                 old = rules[old_id]
                 if old["kind"] == "constraint" or old.get("required"):
-                    raise QGError("MANDATORY_CONFLICT", 3)
+                    raise QGError("MANDATORY_CONFLICT", 3, {"rule_id": rule["id"], "target_id": old_id})
                 if old["scope"] != rule["scope"]:
                     raise QGError("OVERRIDE_SCOPE_MISMATCH", 3)
                 del rules[old_id]
@@ -145,16 +145,16 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
         candidates.extend(pack["examples"])
     for rule in rules.values():
         if set(rule.get("conflicts_with", [])) & rules.keys():
-            raise QGError("RULE_CONFLICT", 3)
+            raise QGError("RULE_CONFLICT", 3, {"rule_id": rule["id"], "conflicts_with": sorted(set(rule.get("conflicts_with", [])) & rules.keys())})
         for other in rules.values():
             if rule["scope"] != other["scope"]:
                 continue
             if rule["enforcement"] == "required_literal" and other["enforcement"] == "forbidden_literal":
                 if other["parameters"]["literal"] in rule["parameters"]["literal"]:
-                    raise QGError("MANDATORY_CONFLICT", 3)
+                    raise QGError("MANDATORY_CONFLICT", 3, {"rule_id": rule["id"], "target_id": other["id"]})
             if rule["enforcement"] == "required_literal" and other["enforcement"] == "max_chars":
                 if len(rule["parameters"]["literal"]) > other["parameters"]["max_chars"]:
-                    raise QGError("MANDATORY_CONFLICT", 3)
+                    raise QGError("MANDATORY_CONFLICT", 3, {"rule_id": rule["id"], "target_id": other["id"]})
     if public and visibility != "public":
         raise QGError("PRIVATE_TO_PUBLIC_DENIED", 3)
     if model_host not in permissions["approved_model_hosts"] or not permissions["retrieval"]:
@@ -162,6 +162,8 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
     if public and not permissions["public_redistribution"]:
         raise QGError("PUBLIC_REDISTRIBUTION_DENIED", 3)
     unique(candidates)
+    if public and any(e["visibility"] != "public" or not e["permissions"]["public_redistribution"] for e in candidates):
+        raise QGError("PRIVATE_EXAMPLE_METADATA_IN_PUBLIC_BUILD", 3)
     selected_rules, omitted_rules = [], []
     payload = POLICY
     mandatory = sorted((r for r in rules.values() if r["kind"] == "constraint" or r.get("required")), key=lambda r: r["id"])

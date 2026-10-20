@@ -35,9 +35,8 @@ def test_private_example_visibility_never_downgrades(pack, save):
     pack["examples"] = [private]
     context, _ = compile_context(save(pack))
     assert context["visibility"] == "private"
-    public, _ = compile_context(save(pack), public=True)
-    assert public["examples_selected"] == []
-    assert "PRIVATE_SYNTHETIC_CONTENT" not in public["prompt_payload"]
+    with pytest.raises(QGError, match="PRIVATE_EXAMPLE_METADATA"):
+        compile_context(save(pack), public=True)
 
 
 def test_negative_examples_marked_and_modes_restricted(pack, save):

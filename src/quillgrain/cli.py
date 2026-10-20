@@ -108,11 +108,25 @@ def run(a):
                 raise QGError("DUPLICATE_BINDING")
             bindings[identity] = Path(path)
         if a.action == "validate":
-            return {"status": "VALID", "packs": [p["id"] for p in load_chain(a.pack, bindings)]}
+            chain = load_chain(a.pack, bindings)
+            final = chain[-1]
+            modes = final.get("modes", [{"language": lang, "register": reg} for lang in final["languages"] for reg in final["registers"]])
+            if final["permissions"]["retrieval"] and final["permissions"]["approved_model_hosts"]:
+                for mode in modes:
+                    compile_context(a.pack, bindings=bindings, language=mode["language"], register=mode["register"],
+                                    model_host=final["permissions"]["approved_model_hosts"][0], max_chars=1000000)
+            return {"status": "VALID", "packs": [p["id"] for p in chain]}
         host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "patchpitch-legacy": "ollama"}[a.target]
-        context, lock = compile_context(a.pack, bindings=bindings, register=a.register, language=a.language,
-                                        target=a.target, model_host=host, tags=a.tag, max_chars=a.max_chars,
-                                        public=a.public, lock=a.lock)
+        try:
+            context, lock = compile_context(a.pack, bindings=bindings, register=a.register, language=a.language,
+                                            target=a.target, model_host=host, tags=a.tag, max_chars=a.max_chars,
+                                            public=a.public, lock=a.lock)
+        except QGError as exc:
+            # Keep potentially private rule IDs in the explicitly chosen local output,
+            # while terminal diagnostics remain short and path/text-free.
+            write_json(Path(a.out) / "build-error.json", {"status": "CONFLICT" if "CONFLICT" in exc.code else "ERROR",
+                                                        "code": exc.code, "details": {} if a.public else exc.details})
+            raise
         export(context, lock, a.out)
         return {"status": "BUILT", "build_id": context["build_id"], "visibility": context["visibility"],
                 "codepoints": context["budget"]["used_codepoints"], "warnings": context["warnings"]}

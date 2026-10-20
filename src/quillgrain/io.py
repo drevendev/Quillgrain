@@ -6,10 +6,11 @@ from pathlib import Path
 
 
 class QGError(Exception):
-    def __init__(self, code, exit_code=2):
+    def __init__(self, code, exit_code=2, details=None):
         super().__init__(code)
         self.code = code
         self.exit_code = exit_code
+        self.details = details or {}
 
 
 def canonical(value):
