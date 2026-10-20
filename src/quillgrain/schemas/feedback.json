@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.feedback/v1"
+    },
+    "before_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "after_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "context_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "before": {
+      "type": "string"
+    },
+    "after": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "voice",
+        "fact",
+        "structure",
+        "taste",
+        "project_constraint",
+        "one_off",
+        "unknown"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "registers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "channel": {
+          "enum": [
+            "all",
+            "narration",
+            "dialogue"
+          ]
+        },
+        "characters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": []
+    },
+    "proposed_rule_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision_status": {
+      "const": "CANDIDATE"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private",
+        "local_only"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "before_sha256",
+    "after_sha256",
+    "context_id",
+    "run_id",
+    "before",
+    "after",
+    "note",
+    "reason",
+    "scope",
+    "proposed_rule_ids",
+    "decision_status",
+    "visibility"
+  ]
+}

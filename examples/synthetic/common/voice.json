@@ -1,0 +1,75 @@
+{
+  "schema_version": "quillgrain.voice-pack/v1",
+  "id": "quillgrain.synthetic",
+  "version": "0.1.0",
+  "visibility": "public",
+  "status": "REVIEWED",
+  "languages": [
+    "ru",
+    "en"
+  ],
+  "registers": [
+    "conversational",
+    "essay",
+    "fiction_narration",
+    "maker_announcement"
+  ],
+  "extends": [],
+  "rules": [
+    {
+      "id": "synthetic.clarity",
+      "kind": "preference",
+      "scope": {},
+      "instruction": "Describe the supplied object in concrete words.",
+      "priority": 50,
+      "enforcement": "human_review",
+      "evidence_ids": [],
+      "origin": "designed_default",
+      "status": "REVIEWED"
+    },
+    {
+      "id": "synthetic.no-unshipped",
+      "kind": "constraint",
+      "scope": {
+        "channel": "narration"
+      },
+      "instruction": "Do not claim teleportation in this fixture.",
+      "priority": 100,
+      "enforcement": "forbidden_literal",
+      "parameters": {
+        "literal": "телепортация"
+      },
+      "evidence_ids": [],
+      "origin": "designed_default",
+      "status": "REVIEWED",
+      "severity": "error"
+    }
+  ],
+  "examples": [],
+  "provenance": [
+    {
+      "id": "common.original-v1",
+      "kind": "synthetic_ai_prepared",
+      "note": "Original fixtures written for this pack; no personal or third-party corpus. Desired examples, not measured human writing."
+    }
+  ],
+  "compatibility": {
+    "engine": "0.1",
+    "schema": "v1"
+  },
+  "permissions": {
+    "local_analysis": true,
+    "retrieval": true,
+    "private_git_excerpt": true,
+    "approved_model_hosts": [
+      "offline",
+      "chatgpt",
+      "codex",
+      "ollama"
+    ],
+    "public_redistribution": true
+  },
+  "limitations": [
+    "Synthetic demonstration; no author claim."
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.check-report/v1"
+    },
+    "draft_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "engine_version": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "warning",
+              "error"
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "review": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "severity",
+          "method",
+          "start",
+          "end",
+          "explanation",
+          "review"
+        ]
+      }
+    },
+    "skipped_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "draft_sha256",
+    "context_hash",
+    "engine_version",
+    "findings",
+    "skipped_checks",
+    "errors"
+  ]
+}

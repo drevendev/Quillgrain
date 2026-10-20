@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==84.2.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quillgrain"
+version = "0.1.0rc1"
+description = "Every voice has a grain. Portable author-voice tooling."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["jsonschema==4.26.0"]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "build==1.6.1", "wheel==0.48.0"]
+
+[project.scripts]
+quillgrain = "quillgrain.cli:main"
+qg = "quillgrain.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+quillgrain = ["schemas/*.json", "resources/SKILL.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

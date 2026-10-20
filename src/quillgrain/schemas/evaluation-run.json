@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.evaluation-run/v1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "group_id": {
+      "type": "string"
+    },
+    "split": {
+      "type": "string"
+    },
+    "arm": {
+      "enum": [
+        "B0",
+        "B1",
+        "B2"
+      ]
+    },
+    "engine_version": {
+      "type": "string"
+    },
+    "pack_revisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "digest"
+        ]
+      }
+    },
+    "model_surface": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "generation_options": {
+      "type": "object"
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "prompt_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "raw_output": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "raw_output_hash": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "edited_output": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evaluator": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "human_decision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "NOT_RUN",
+        "LIVE",
+        "MOCK",
+        "FAILED"
+      ]
+    },
+    "quality_status": {
+      "const": "HUMAN_REVIEW_PENDING"
+    },
+    "session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "independence": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "case_id",
+    "group_id",
+    "split",
+    "arm",
+    "engine_version",
+    "pack_revisions",
+    "model_surface",
+    "model_id",
+    "generation_options",
+    "input_hash",
+    "prompt_hash",
+    "raw_output",
+    "raw_output_hash",
+    "edited_output",
+    "warnings",
+    "evaluator",
+    "human_decision",
+    "status",
+    "quality_status",
+    "session_id",
+    "independence"
+  ]
+}

@@ -1,0 +1,476 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.voice-pack/v1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[a-zA-Z0-9.-]+)?$"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private",
+        "local_only"
+      ]
+    },
+    "status": {
+      "enum": [
+        "CANDIDATE",
+        "REVIEWED",
+        "VALIDATED",
+        "RETIRED"
+      ]
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "registers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "digest"
+        ]
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "preference",
+              "constraint"
+            ]
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "registers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "channel": {
+                "enum": [
+                  "all",
+                  "narration",
+                  "dialogue"
+                ]
+              },
+              "characters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": []
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "enforcement": {
+            "enum": [
+              "human_review",
+              "required_literal",
+              "forbidden_literal",
+              "max_chars"
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "origin": {
+            "enum": [
+              "designed_default",
+              "observed",
+              "owner_preference",
+              "editorial_hypothesis"
+            ]
+          },
+          "status": {
+            "enum": [
+              "CANDIDATE",
+              "REVIEWED",
+              "VALIDATED",
+              "RETIRED"
+            ]
+          },
+          "overrides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conflicts_with": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "warning",
+              "error"
+            ]
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "literal": {
+                "type": "string"
+              },
+              "max_chars": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "scope",
+          "instruction",
+          "priority",
+          "enforcement",
+          "evidence_ids",
+          "origin",
+          "status"
+        ]
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "register": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "work_id": {
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "narration",
+              "dialogue"
+            ]
+          },
+          "character_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "local_analysis": {
+                "type": "boolean"
+              },
+              "retrieval": {
+                "type": "boolean"
+              },
+              "private_git_excerpt": {
+                "type": "boolean"
+              },
+              "approved_model_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "public_redistribution": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "local_analysis",
+              "retrieval",
+              "private_git_excerpt",
+              "approved_model_hosts",
+              "public_redistribution"
+            ]
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "private",
+              "local_only"
+            ]
+          },
+          "role": {
+            "enum": [
+              "positive",
+              "negative",
+              "before_after"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "authorship": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATE",
+              "REVIEWED",
+              "VALIDATED",
+              "RETIRED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "language",
+          "register",
+          "source_id",
+          "work_id",
+          "channel",
+          "permissions",
+          "visibility",
+          "role",
+          "tags",
+          "priority",
+          "authorship",
+          "status"
+        ]
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "note"
+        ]
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "const": "0.1"
+        },
+        "schema": {
+          "const": "v1"
+        }
+      },
+      "required": [
+        "engine",
+        "schema"
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "local_analysis": {
+          "type": "boolean"
+        },
+        "retrieval": {
+          "type": "boolean"
+        },
+        "private_git_excerpt": {
+          "type": "boolean"
+        },
+        "approved_model_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "public_redistribution": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "local_analysis",
+        "retrieval",
+        "private_git_excerpt",
+        "approved_model_hosts",
+        "public_redistribution"
+      ]
+    },
+    "human_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reviewer": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "registers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "reviewer",
+        "reference",
+        "languages",
+        "registers"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "modes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "register": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATE",
+              "REVIEWED",
+              "UNVALIDATED_ADAPTATION"
+            ]
+          }
+        },
+        "required": [
+          "language",
+          "register",
+          "status"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "visibility",
+    "status",
+    "languages",
+    "registers",
+    "extends",
+    "rules",
+    "examples",
+    "provenance",
+    "compatibility",
+    "permissions"
+  ]
+}

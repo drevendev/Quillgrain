@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.compiled-context/v1"
+    },
+    "build_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "engine_version": {
+      "type": "string"
+    },
+    "canonicalization": {
+      "const": "qg-json-v1"
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "digest"
+        ]
+      }
+    },
+    "language": {
+      "type": "string"
+    },
+    "register": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string"
+    },
+    "model_host": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rules_applied": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "preference",
+              "constraint"
+            ]
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "registers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "channel": {
+                "enum": [
+                  "all",
+                  "narration",
+                  "dialogue"
+                ]
+              },
+              "characters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": []
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "enforcement": {
+            "enum": [
+              "human_review",
+              "required_literal",
+              "forbidden_literal",
+              "max_chars"
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "origin": {
+            "enum": [
+              "designed_default",
+              "observed",
+              "owner_preference",
+              "editorial_hypothesis"
+            ]
+          },
+          "status": {
+            "enum": [
+              "CANDIDATE",
+              "REVIEWED",
+              "VALIDATED",
+              "RETIRED"
+            ]
+          },
+          "overrides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conflicts_with": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "warning",
+              "error"
+            ]
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "literal": {
+                "type": "string"
+              },
+              "max_chars": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "scope",
+          "instruction",
+          "priority",
+          "enforcement",
+          "evidence_ids",
+          "origin",
+          "status"
+        ]
+      }
+    },
+    "rules_omitted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason"
+        ]
+      }
+    },
+    "rules_overridden": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "by"
+        ]
+      }
+    },
+    "examples_selected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "register": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "work_id": {
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "narration",
+              "dialogue"
+            ]
+          },
+          "character_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "local_analysis": {
+                "type": "boolean"
+              },
+              "retrieval": {
+                "type": "boolean"
+              },
+              "private_git_excerpt": {
+                "type": "boolean"
+              },
+              "approved_model_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "public_redistribution": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "local_analysis",
+              "retrieval",
+              "private_git_excerpt",
+              "approved_model_hosts",
+              "public_redistribution"
+            ]
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "private",
+              "local_only"
+            ]
+          },
+          "role": {
+            "enum": [
+              "positive",
+              "negative",
+              "before_after"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "authorship": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATE",
+              "REVIEWED",
+              "VALIDATED",
+              "RETIRED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "language",
+          "register",
+          "source_id",
+          "work_id",
+          "channel",
+          "permissions",
+          "visibility",
+          "role",
+          "tags",
+          "priority",
+          "authorship",
+          "status"
+        ]
+      }
+    },
+    "examples_omitted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason"
+        ]
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "unicode_codepoints"
+        },
+        "max_codepoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "used_codepoints": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "unit",
+        "max_codepoints",
+        "used_codepoints"
+      ]
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private",
+        "local_only"
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "local_analysis": {
+          "type": "boolean"
+        },
+        "retrieval": {
+          "type": "boolean"
+        },
+        "private_git_excerpt": {
+          "type": "boolean"
+        },
+        "approved_model_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "public_redistribution": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "local_analysis",
+        "retrieval",
+        "private_git_excerpt",
+        "approved_model_hosts",
+        "public_redistribution"
+      ]
+    },
+    "prompt_payload": {
+      "type": "string"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lock_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "conflict_report": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "build_id",
+    "engine_version",
+    "canonicalization",
+    "packs",
+    "language",
+    "register",
+    "target",
+    "model_host",
+    "tags",
+    "rules_applied",
+    "rules_omitted",
+    "rules_overridden",
+    "examples_selected",
+    "examples_omitted",
+    "budget",
+    "visibility",
+    "permissions",
+    "prompt_payload",
+    "warnings",
+    "lock_digest",
+    "conflict_report"
+  ]
+}
