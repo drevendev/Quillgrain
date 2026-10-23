@@ -48,4 +48,4 @@ if __name__ == '__main__':
     for name, schema in {'corpus': CORPUS, 'corpus-source': SOURCE, 'corpus-fragment': FRAGMENT,
                          'voice-pack-v2': PACK, 'compiled-context-v2': CONTEXT}.items():
         path = D['DEST'] / (name + '.json')
-        path.write_text(json.dumps({'$schema': 'https://json-schema.org/draft/2020-12/schema', **schema}, indent=2) + '\n', encoding='utf-8')
+        path.write_text(json.dumps({'$schema': 'https://json-schema.org/draft/2020-12/schema', **schema}, indent=2) + '\n', encoding='utf-8', newline='\n')
