@@ -5,6 +5,11 @@ The canonical format is JSON. Closed Draft 2020-12 schemas ship in
 `python scripts/write_schemas.py`. Unknown fields and schema versions are rejected.
 `voice.json` contains inline rules and examples; Markdown is documentation.
 
+Voice v2 additionally supports pinned corpus dependencies, exact example refs and
+evidence refs. Corpus resources are separate from voice inheritance. Compiled
+context/lock v2 retain resource identities and selected-material lineage; v1 formats
+remain supported. See [corpus repositories](corpus-repository.md).
+
 Composition is a local, explicit dependency graph. Bind parents with
 `--bind PACK_ID=LOCAL_DIRECTORY`. Every edge pins ID, exact version and digest.
 There are no network loaders, hooks, pack-defined code or model endpoints. The

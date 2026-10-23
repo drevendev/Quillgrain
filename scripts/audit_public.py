@@ -8,14 +8,15 @@ from pathlib import Path, PurePosixPath
 ROOT_FILES = {"README.md", "AGENTS.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md",
               "pyproject.toml", "MANIFEST.in", ".gitignore", "requirements-dev.lock.txt"}
 ROOT_DIRS = {"src", "schemas", "tests", "examples", "scripts", "docs", ".github", "templates", "skills"}
-DENIED = {".private", "corpus", "runs", "exports", "Quillgrain_Dreven", "voice_reference.txt", "source-roots.local.json"}
+DENIED = {".private", "corpus", "runs", "exports", "Quillgrain_Dreven", "Quillgrain_Corpus", "Quillgrain_Voice_Dreven", "voice_reference.txt", "source-roots.local.json"}
 SKIP = {".git", ".venv", "__pycache__", ".pytest_cache", "build", "dist"}
 
 
 def source_members(root):
     if (root / ".git").exists():
         tracked = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, check=True).stdout
-        candidates = [root / name.decode("utf-8") for name in tracked.split(b"\0") if name]
+        untracked = subprocess.run(['git','-C',str(root),'ls-files','--others','--exclude-standard','-z'], capture_output=True, check=True).stdout
+        candidates = [root / name.decode('utf-8') for name in set((tracked + untracked).split(b'\0')) if name]
     else:
         candidates = root.rglob("*")
     for file in candidates:

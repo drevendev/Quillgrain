@@ -2,12 +2,12 @@
 import os
 import re
 import unicodedata
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from .checks import regions
 from .contracts import validate
-from .io import QGError, bounded, digest, sha, read_json, write_json, write_bytes
+from .io import QGError, bounded, digest, sha, read_json, write_json, canonical, publish_bundle, is_link
 
-EXTRACTOR = "qg-narration-nfc-v1"
+EXTRACTOR = "qg-narration-nfc-v2"
 IGNORED = {".obsidian", ".git", ".trash", "plugins", "attachments", "assets", "secrets", "node_modules"}
 
 
@@ -33,7 +33,29 @@ def extract(raw):
 
 
 def config_roots(config):
-    entries = config["roots"]
+    if not isinstance(config, dict) or not isinstance(config.get('roots'), list):
+        raise QGError('INVALID_SOURCE_CONFIG')
+    entries = config['roots']
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get('alias'), str) or not entry['alias']:
+            raise QGError('INVALID_SOURCE_CONFIG')
+        permissions = entry.get('permissions')
+        if not isinstance(permissions, dict) or any(type(permissions.get(k)) is not bool for k in
+                ('local_analysis', 'retrieval', 'private_git_excerpt', 'public_redistribution')):
+            raise QGError('INVALID_SOURCE_PERMISSIONS')
+        hosts = permissions.get('approved_model_hosts')
+        if not isinstance(hosts, list) or any(not isinstance(h, str) for h in hosts):
+            raise QGError('INVALID_SOURCE_PERMISSIONS')
+        if 'include_files' in entry:
+            included = entry['include_files']
+            if not isinstance(included, list) or any(not isinstance(s, str) or not s for s in included):
+                raise QGError('INVALID_SOURCE_ALLOWLIST')
+            for name in included:
+                rel = Path(name)
+                if rel.is_absolute() or rel.drive or PureWindowsPath(name).drive or '..' in rel.parts or '\\' in name:
+                    raise QGError('INVALID_SOURCE_ALLOWLIST')
+        if type(entry.get('max_files', 10000)) is not int or entry.get('max_files', 10000) < 0:
+            raise QGError('INVALID_SOURCE_LIMIT')
     if len({entry["alias"] for entry in entries}) != len(entries):
         raise QGError("DUPLICATE_SOURCE_ALIAS")
     for entry in entries:
@@ -41,6 +63,33 @@ def config_roots(config):
         if not root.is_absolute() or not root.is_dir():
             raise QGError("SOURCE_ROOT_UNAVAILABLE", 3)
     return {entry["alias"]: entry for entry in entries}
+
+
+def authorize(entry, relative):
+    """Called immediately before every source content read, including stale selections."""
+    if not entry['permissions']['local_analysis']:
+        raise QGError('SOURCE_DENIED', 3)
+    rel = Path(relative)
+    if rel.is_absolute() or rel.drive or PureWindowsPath(relative).drive or '..' in rel.parts or '\\' in relative:
+        raise QGError('PATH_ESCAPE', 3)
+    if 'include_files' in entry and rel.as_posix() not in entry['include_files']:
+        raise QGError('SOURCE_NOT_ALLOWLISTED', 3)
+    if rel.suffix.lower() not in ('.md', '.txt') or any(p.startswith('.') or p.lower() in IGNORED for p in rel.parts):
+        raise QGError('SOURCE_TYPE_DENIED', 3)
+    if re.search(r'secret|credential|password|token|api[_-]?key', rel.name, re.I):
+        raise QGError('SOURCE_TYPE_DENIED', 3)
+    root = Path(entry['path'])
+    if is_link(root):
+        raise QGError('SOURCE_LINK_DENIED', 3)
+    candidate = root
+    for part in rel.parts:
+        candidate = candidate / part
+        if is_link(candidate):
+            raise QGError('SOURCE_LINK_DENIED', 3)
+    candidate = bounded(root, rel)
+    if not candidate.is_file():
+        raise QGError('SOURCE_TYPE_DENIED', 3)
+    return candidate
 
 
 def guard_output(config, output):
@@ -54,6 +103,9 @@ def inventory(config, output):
     guard_output(config, output)
     items, skipped, hashes = [], {}, {}
     for alias, entry in sorted(config_roots(config).items()):
+        if not entry['permissions']['local_analysis']:
+            skipped['permission_denied'] = skipped.get('permission_denied', 0) + 1
+            continue
         root = Path(entry["path"]).resolve()
         found = 0
         for directory, dirs, names in os.walk(root, followlinks=False):
@@ -73,10 +125,14 @@ def inventory(config, output):
                     skipped["symlink"] = skipped.get("symlink", 0) + 1
                     continue
                 relative = candidate.relative_to(root).as_posix()
+                included = entry.get("include_files")
+                if included is not None and relative not in included:
+                    continue
                 candidate = bounded(root, relative)
                 if found >= entry.get("max_files", 10000):
                     skipped["inventory_limit"] = skipped.get("inventory_limit", 0) + 1
                     continue
+                candidate = authorize(entry, relative)
                 raw = candidate.read_bytes()
                 try:
                     text, ranges = extract(raw)
@@ -123,10 +179,12 @@ def prepare(selection, config, output):
             raise QGError("SOURCE_DENIED", 3)
         # Selection cannot grant rights omitted by the trusted root configuration.
         trusted = roots[item["source_alias"]]["permissions"]
+        if not trusted['local_analysis']:
+            raise QGError('SOURCE_DENIED', 3)
         for key, value in item["permissions"].items():
             if (isinstance(value, list) and not set(value) <= set(trusted[key])) or (value is True and trusted[key] is not True):
                 raise QGError("PERMISSION_ESCALATION", 3)
-        source = bounded(roots[item["source_alias"]]["path"], item["relative_locator"])
+        source = authorize(roots[item['source_alias']], item['relative_locator'])
         raw = source.read_bytes()
         if sha(raw) != item["raw_sha256"]:
             raise QGError("SOURCE_MUTATED", 3)
@@ -137,7 +195,7 @@ def prepare(selection, config, output):
             raise QGError("AUTHORSHIP_UNCONFIRMED", 3)
         plans.append((item, text))
     # Validate the full batch before writing any derived text.
-    for item, text in plans:
-        write_bytes(Path(output) / (item["id"] + ".txt"), text.encode("utf-8"))
-    write_json(Path(output) / "manifest.json", {"items": selected, "extraction_profile": EXTRACTOR})
+    members = {item['id'] + '.txt': text.encode('utf-8') for item, text in plans}
+    members['manifest.json'] = canonical({'items': selected, 'extraction_profile': EXTRACTOR})
+    publish_bundle(output, members)
     return {"prepared": len(plans), "source_mutation": False}

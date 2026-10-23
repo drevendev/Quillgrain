@@ -2,7 +2,10 @@
 
 import hashlib
 import json
-from pathlib import Path
+import os
+import stat
+import uuid
+from pathlib import Path, PureWindowsPath
 
 
 class QGError(Exception):
@@ -45,9 +48,65 @@ def write_json(path, value):
 
 
 def write_bytes(path, value):
-    path = Path(path)
+    path = safe_destination(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(value)
+    safe_destination(path)
+    temporary = path.with_name('.qg-write-' + uuid.uuid4().hex)
+    try:
+        with temporary.open('xb') as stream:
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        safe_destination(path)
+        # Replacing a regular hardlink replaces the directory entry, never its source.
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def is_link(path):
+    """Includes Windows reparse points, not just symbolic links."""
+    try:
+        info = Path(path).lstat()
+    except FileNotFoundError:
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
+
+
+def safe_destination(path):
+    # Do not resolve first: that would hide a link in the supplied path.
+    path = Path(os.path.abspath(path))
+    for part in (*reversed(path.parents), path):
+        if is_link(part):
+            raise QGError('OUTPUT_LINK_DENIED', 3)
+    return path
+
+
+def publish_bundle(output, members):
+    """Create-only bundle. Failed staging is never exposed as the final output."""
+    output = safe_destination(output)
+    if os.path.lexists(output):
+        raise QGError('OUTPUT_ALREADY_EXISTS', 3)
+    files = {}
+    for name, data in members.items():
+        rel = Path(name)
+        if rel.is_absolute() or rel.drive or PureWindowsPath(name).drive or '..' in rel.parts or not rel.parts:
+            raise QGError('PATH_ESCAPE', 3)
+        if not isinstance(data, bytes):
+            raise QGError('BUNDLE_BYTES_REQUIRED')
+        files[rel] = data
+    output.parent.mkdir(parents=True, exist_ok=True)
+    safe_destination(output)
+    staging = output.with_name('.qg-incomplete-' + uuid.uuid4().hex)
+    staging.mkdir()
+    for rel, data in files.items():
+        write_bytes(staging / rel, data)
+    safe_destination(output)
+    if os.path.lexists(output):
+        raise QGError('OUTPUT_ALREADY_EXISTS', 3)
+    # Single-operator local transaction; not a lock against a malicious concurrent writer.
+    staging.rename(output)
 
 
 def read_jsonl(path):
@@ -58,7 +117,7 @@ def read_jsonl(path):
 def bounded(root, relative):
     root = Path(root).resolve(strict=True)
     relative = Path(relative)
-    if relative.is_absolute() or ".." in relative.parts or relative.drive:
+    if relative.is_absolute() or ".." in relative.parts or relative.drive or PureWindowsPath(relative).drive:
         raise QGError("PATH_ESCAPE", 3)
     target = (root / relative).resolve(strict=True)
     if not target.is_relative_to(root):

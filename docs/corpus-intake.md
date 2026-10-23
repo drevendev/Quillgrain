@@ -1,10 +1,15 @@
 # Read-only private intake
 
+For approved snapshots stored in a dedicated PRIVATE repository, see the newer
+[versioned corpus workflow](corpus-repository.md). The source-root workflow below
+remains supported; its machine paths and full inventories remain local.
+
 `qg corpus inventory --config source-roots.local.json --out inventory.json` accepts
 trusted local configuration with a `roots` array. Each entry declares `alias`, an
 absolute `path`, `source_kind`, `language`, `register`, `rights`, `permissions`, and
 `approval: {by, basis}`. `authorship` defaults to unknown. Optional `max_files` bounds
-the initial inventory; `work_groups` explicitly maps relative locators to work IDs.
+the initial inventory; `include_files` limits a root to named relative files (an empty
+list reads none); `work_groups` explicitly maps relative locators to work IDs.
 Never commit this configuration or the inventory.
 
 Permissions explicitly declare `local_analysis`, `retrieval`, `private_git_excerpt`,
@@ -38,3 +43,17 @@ is outside the v0.1 threat model; use trusted roots and a stable read-only snaps
 `feedback record` stores before/after, hashes, reason and scope in the chosen private
 output. It activates no rules. Fact corrections and one-off changes cannot propose
 a voice rule through that command. Owner decisions remain separate.
+
+## Изменение извлечения в 0.1.0rc3
+
+`qg-narration-nfc-v2` исключает многострочные HTML-комментарии и продолженные
+blockquote до границы блока. Незакрытые/неоднозначные блоки консервативно исключаются.
+Прежние манифесты v1 не переинтерпретируются: их нужно явно пересобрать из неизменённых
+источников. Разбор Markdown и статус authored не доказывают авторство.
+
+Разрешение и точный allowlist повторно проверяются непосредственно перед каждым
+чтением. Пустой allowlist разрешает ноль файлов. Подготовка создаёт новый каталог;
+занятый путь, symlink/reparse и запись в исходники отклоняются. Неудачная транзакция
+может оставить каталог `.qg-incomplete-*`, который не является готовым результатом.
+Это локальная транзакция одного оператора, не защита от злонамеренной конкурентной
+подмены дерева файлов.

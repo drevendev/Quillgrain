@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ink Duel — слепая редакторская оценка</title>
+<link rel="stylesheet" href="styles.css"><script defer src="app.js"></script></head>
+<body><header class="top"><a class="brand" href="/" aria-label="Ink Duel, начало">Ink Duel<span>QUILLGRAIN</span></a><span id="progress">Редакторская лаборатория</span><button id="help" class="quiet">Как оценивать</button></header>
+<div id="notice" class="notice" role="status" aria-live="polite"></div>
+<main id="app"><p>Загрузка локального набора…</p></main>
+<footer><span>Твои оценки. Твои решения.</span><span>Всё сохраняется локально. Ничего не отправляется.</span></footer>
+<dialog id="rubric"><h2>Пять разных вопросов к тексту</h2><div id="rubric-content"></div><p>2 и 4 — промежуточные оценки. «Не могу оценить» для точности не считается нулём. Естественность — ощущение от речи, не определение авторства.</p><form method="dialog"><button>Понятно</button></form></dialog>
+<input id="bundle-file" type="file" accept="application/json,.json" hidden>
+<input id="progress-file" type="file" accept="application/json,.json" hidden>
+<input id="reveal-file" type="file" accept="application/json,.json" hidden>
+</body></html>

@@ -1,5 +1,8 @@
 # Quillgrain
 
+Local Russian editorial evaluation: [Ink Duel](docs/ink-duel.md). Real case packs,
+private references, votes and answer keys stay outside the repository.
+
 **Every voice has a grain.**
 
 Compile a versioned, permission-aware writing context, export it for an existing
@@ -21,11 +24,13 @@ AI-prepared data, not an empirical human corpus. It checks a fictional lamp brie
 the fixture's forbidden-literal constraint is specific to that brief.
 
 For the independent neutral pack, clone
-[Quillgrain_Common](https://github.com/drevendev/Quillgrain_Common) next to this
-repository and pass `--pack ../Quillgrain_Common`. Common contains soft editorial
+[Quillgrain_Voice_Common](https://github.com/drevendev/Quillgrain_Voice_Common) next to this
+repository and pass `--pack ../Quillgrain_Voice_Common`. Common contains soft editorial
 defaults and RU/EN examples. Other voices are data packs, not engine forks.
 
 Exports contain `VOICE_CONTEXT.md`, `context.json` and a version/digest lock.
+`--target patchpitch` adds a portable `voice-bundle.json` for explicit local
+application import; see the [consumer contract](docs/consumer-voice.md).
 `--target codex` additionally exports a generic `.agents/skills/quillgrain/SKILL.md`.
 `--target patchpitch-legacy` exports a maximum 1,200-codepoint `voice_reference.txt`
 and manifest for manual use in the existing field. Pass `--host` explicitly when
@@ -36,3 +41,11 @@ See [contracts and composition](docs/voice-pack-format.md),
 [evaluation](docs/evaluation.md), and [integration boundaries](docs/integration-contracts.md).
 Technical checks establish structural properties; human review determines voice
 quality. Optional Scriptorium observations retain their native units and nulls.
+
+Version 0.1.0rc4 supports explicitly bound private corpus repositories and voice v2
+references, while retaining voice/context v1 compatibility. Approved sources can
+live in a separate PRIVATE data repository with local checks and no CI. Builds pin
+exact revisions/fragments; exports embed selected examples and work offline.
+Use `--examples none` for an explicit rules-only build. See the
+[corpus repository contract](docs/corpus-repository.md) for intake, permissions,
+metadata search, impact reports and `qg explain`.

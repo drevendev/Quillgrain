@@ -1,14 +1,15 @@
 """Prompt packets and evidence recording; deliberately no model runner."""
 import random
+import uuid
 from collections import Counter
 from pathlib import Path
 from . import __version__
 from .contracts import validate, verify_context
-from .io import QGError, digest, sha, read_json, write_json, write_bytes
+from .io import QGError, digest, sha, read_json, write_json, write_bytes, canonical, publish_bundle
 
 
 def prepare(cases, output):
-    count = 0
+    count, members = 0, {}
     for case_path in sorted(Path(cases).glob("*.json")):
         case = read_json(case_path)
         identity = case["id"]
@@ -36,17 +37,36 @@ def prepare(cases, output):
                        edited_output=None, warnings=[], evaluator=None, human_decision=None,
                        status="NOT_RUN", quality_status="HUMAN_REVIEW_PENDING", session_id=None, independence=None)
             validate(run, "evaluation-run")
-            write_bytes(dest / "prompt.md", prompt.encode("utf-8"))
+            prefix = identity + '/' + arm + '/'
+            members[prefix + 'prompt.md'] = prompt.encode('utf-8')
             if context:
-                write_json(dest / "context.json", context)
-            write_json(dest / "run.json", run)
+                members[prefix + 'context.json'] = canonical(context)
+            members[prefix + 'run.json'] = canonical(run)
             count += 1
+    publish_bundle(output, members)
     return {"packets": count, "status": "NOT_RUN"}
+
+
+def verify_run(manifest):
+    manifest = Path(manifest)
+    run = validate(read_json(manifest), 'evaluation-run')
+    prompt = (manifest.parent / 'prompt.md').read_bytes()
+    if sha(prompt) != run['prompt_hash']:
+        raise QGError('PROMPT_MUTATED', 3)
+    if run['arm'] != 'B0':
+        ctx = verify_context(read_json(manifest.parent / 'context.json'))
+        if ctx['packs'] != run['pack_revisions'] or not prompt.endswith(ctx['prompt_payload'].encode('utf-8')):
+            raise QGError('CONTEXT_RUN_MISMATCH', 3)
+    if run['status'] != 'NOT_RUN':
+        raw = (manifest.parent / 'raw-output.md').read_bytes()
+        if sha(raw) != run['raw_output_hash'] or raw.decode('utf-8') != run['raw_output']:
+            raise QGError('RAW_OUTPUT_MUTATED', 3)
+    return run
 
 
 def record(manifest, output, *, surface=None, model=None, session=None, independence=None, status="LIVE"):
     manifest = Path(manifest)
-    run = validate(read_json(manifest), "evaluation-run")
+    run = verify_run(manifest)
     if run["status"] != "NOT_RUN":
         raise QGError("RUN_IMMUTABLE", 3)
     prompt = (manifest.parent / "prompt.md").read_bytes()
@@ -58,7 +78,9 @@ def record(manifest, output, *, surface=None, model=None, session=None, independ
     text = raw.decode("utf-8")
     if not text.strip():
         raise QGError("EMPTY_MODEL_OUTPUT")
-    write_bytes(manifest.parent / "raw-output.md", raw)
+    if (manifest.parent / 'raw-output.md').exists():
+        raise QGError('RAW_OUTPUT_ALREADY_EXISTS', 3)
+    write_bytes(manifest.parent / 'raw-output.md', raw)
     run.update(status=status, raw_output=text, raw_output_hash=sha(raw), model_surface=surface,
                model_id=model, session_id=session, independence=independence)
     validate(run, "evaluation-run")
@@ -67,7 +89,7 @@ def record(manifest, output, *, surface=None, model=None, session=None, independ
 
 
 def report(runs, output):
-    records = [validate(read_json(p), "evaluation-run") for p in sorted(Path(runs).rglob("run.json"))]
+    records = [verify_run(p) for p in sorted(Path(runs).rglob('run.json'))]
     counts = dict(Counter(r["status"] for r in records))
     groups = {}
     for run in records:
@@ -78,16 +100,19 @@ def report(runs, output):
         live = [r for r in group if r["status"] == "LIVE"]
         if len({(r["model_surface"], r["model_id"], digest(r["generation_options"])) for r in live}) > 1:
             raise QGError("UNEQUAL_MODEL_CONDITIONS", 3)
-    summary = {"counts": counts, "quality_status": "HUMAN_REVIEW_PENDING",
+    summary = {"counts": counts, "quality_status": "HUMAN_REVIEW_PENDING", 'review_set_id': uuid.uuid4().hex,
+               'complete_live_groups': sum({r['arm'] for r in g if r['status'] == 'LIVE'} == {'B0', 'B1', 'B2'} and len(g) == 3 for g in groups.values()),
+               'groups': len(groups),
                "independence": "Inspect recorded surface/session declarations; no unobserved guarantees.",
                "generation": "Quillgrain did not call a model."}
-    write_json(Path(output) / "report.json", summary)
+    members = {'report.json': canonical(summary)}
     key = []
     live = [r for r in records if r["status"] == "LIVE"]
     random.SystemRandom().shuffle(live)
     for index, run in enumerate(live, 1):
         name = f"sample-{index:02d}.md"
-        write_bytes(Path(output) / "blind" / name, run["raw_output"].encode("utf-8"))
+        members['blind/' + name] = run['raw_output'].encode('utf-8')
         key.append({"file": name, "run_id": run["id"]})
-    write_json(Path(output) / "review-key.private.json", key)
+    members['review-key.private.json'] = canonical(key)
+    publish_bundle(output, members)
     return summary

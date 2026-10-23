@@ -1,8 +1,11 @@
 # Privacy and publication
 
 Use separate repositories for the engine, public packs and private packs. Store
-source locators, normalized text, inventories, metrics, raw runs, edits and exports
-outside **every** Git worktree. A private repository does not license redistribution.
+absolute machine locators, raw inventories, metrics, raw runs and exports outside
+Git worktrees. Explicitly approved source snapshots may live in a dedicated PRIVATE
+corpus repository with per-source storage approval and local-only checks, without
+CI. See [the corpus contract](corpus-repository.md). Unknown fetches remain local or
+metadata-only. A private repository does not license redistribution.
 
 Source roots are explicit trusted local configuration. The engine never crawls the
 computer, expands embeds, runs frontmatter or follows data-defined endpoints.
