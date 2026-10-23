@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0rc4 — versioned private corpus resources
+
+Adds private corpus/source/fragment schemas, explicit storage approval, immutable
+content objects, pinned voice v2 references and context/lock v2 lineage. Local
+metadata search, impact and explanation commands support source maintenance.
+Rules-only builds need no corpus; requested unavailable examples fail explicitly.
+Source and example host permissions intersect; protected work groups and known
+duplicates cannot enter examples. Voice/context v1 remains supported.
+Synthetic tests cover integrity, scope, permissions, missing resources, revocation,
+path/junction boundaries, offline exports and caller-selected example pools.
+
 ## Unreleased — pairwise Ink Duel v2
 
 Separate thirty-round categorical protocol with five categories, six treatment

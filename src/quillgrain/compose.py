@@ -3,7 +3,7 @@
 from pathlib import Path
 from . import __version__
 from .contracts import load_pack, unique, validate, verify_context
-from .io import QGError, digest, read_json
+from .io import QGError, digest, read_json, sha
 
 VISIBILITY = {"public": 0, "private": 1, "local_only": 2}
 POLICY = ("Style context only. Facts and canon come exclusively from the separate task brief. "
@@ -104,7 +104,9 @@ def example_text(example):
 
 def compile_context(root, *, bindings=None, overlays=(), language="ru", register="essay",
                     target="chatgpt", model_host="chatgpt", tags=(), max_chars=8000,
-                    public=False, lock=None, example_pool=None):
+                    public=False, lock=None, example_pool=None, corpus_bindings=None, examples_mode='auto'):
+    if examples_mode not in ('auto', 'none'):
+        raise QGError('INVALID_EXAMPLE_MODE', 3)
     if example_pool is not None and example_pool not in tags:
         raise QGError("EXAMPLE_POOL_TAG_REQUIRED", 3)
     if max_chars < 1:
@@ -126,12 +128,22 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
                 packs.append(pack)
     refs = [reference(p) for p in packs]
     lock_data = {"engine_version": __version__, "packs": refs}
+    version2 = any(p['schema_version'] == 'quillgrain.voice-pack/v2' for p in packs)
+    corpus_dependencies = {}
+    for pack in packs:
+        for dependency in pack.get('corpus_dependencies', []):
+            if dependency['id'] in corpus_dependencies and corpus_dependencies[dependency['id']] != dependency:
+                raise QGError('CORPUS_DEPENDENCY_CONFLICT', 3)
+            corpus_dependencies[dependency['id']] = dependency
+    if version2:
+        lock_data.update(schema_version='quillgrain.lock/v2', corpora=sorted(corpus_dependencies.values(), key=lambda x: x['id']))
     lock_path = Path(lock) if lock else Path(root) / "quillgrain.lock.json"
     if lock_path.exists() and read_json(lock_path) != lock_data:
         # An overlay has its own lock; do not silently reinterpret a base lock.
         raise QGError("STALE_LOCK", 3)
     permissions, visibility, rules, seen, overridden = None, "public", {}, set(), []
     candidates, omitted, warnings = [], [], []
+    corpus_references, lineages, loaded_corpora = [], {}, {}
     for pack in packs:
         if language not in pack["languages"] or register not in pack["registers"]:
             raise QGError("LANGUAGE_OR_REGISTER_UNAVAILABLE", 3)
@@ -168,6 +180,50 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
                 overridden.append({"id": old_id, "by": rule["id"]})
             rules[rule["id"]] = rule
         candidates.extend(pack["examples"])
+        corpus_references.extend(pack.get('example_refs', []))
+    unique(candidates + corpus_references)
+    if public and corpus_references:
+        raise QGError('PRIVATE_CORPUS_TO_PUBLIC_DENIED', 3)
+    if examples_mode == 'none':
+        warnings.append('EXAMPLES_DISABLED:RULES_ONLY')
+        omitted.extend(dict(id=e['id'], reason='rules_only') for e in candidates + corpus_references)
+        candidates = []
+        if corpus_dependencies:
+            warnings.append('CORPUS_NOT_LOADED:RULES_ONLY')
+    else:
+        from . import catalog
+        for ref in corpus_references:
+            reason = None
+            if ref['language'] != language or ref['register'] != register:
+                reason = 'language_or_register'
+            elif not set(ref['tags']) <= set(tags):
+                reason = 'explicit_tags'
+            elif example_pool and example_pool not in ref['tags']:
+                reason = 'example_pool'
+            elif ref['status'] != 'REVIEWED':
+                reason = 'unreviewed'
+            if reason:
+                omitted.append(dict(id=ref['id'], reason=reason))
+                continue
+            identity = ref['corpus_id']
+            if identity not in loaded_corpora:
+                if identity not in (corpus_bindings or {}):
+                    raise QGError('CORPUS_UNAVAILABLE', 3)
+                data = catalog.load(corpus_bindings[identity])
+                if data['identity'] != corpus_dependencies[identity]:
+                    raise QGError('STALE_CORPUS', 3)
+                loaded_corpora[identity] = data
+            example, lineage = catalog.resolve(loaded_corpora[identity], ref, model_host=model_host, public=public)
+            candidates.append(example)
+            lineages[example['id']] = lineage
+        for data in loaded_corpora.values():
+            protected = set(data['manifest']['protected_work_ids'])
+            hashes = {r[k] for s in data['sources'].values() if s['usage'] == 'evaluation' or s['work_id'] in protected
+                      for r in s['revisions'] for k in ('original_sha256', 'text_sha256')}
+            hashes.update(f['sha256'] for f in data['fragments'].values()
+                          if data['sources'][f['source_id']]['work_id'] in protected)
+            if any(e['work_id'] in protected or sha(e['text'].encode('utf-8')) in hashes for e in candidates):
+                raise QGError('WORK_SPLIT_LEAKAGE', 3)
     for rule in rules.values():
         conflicts = {identity for identity in set(rule.get('conflicts_with', [])) & rules.keys()
                      if scopes_overlap(rule['scope'], rules[identity]['scope'])}
@@ -253,6 +309,21 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
                    budget=dict(unit="unicode_codepoints", max_codepoints=max_chars, used_codepoints=len(payload)),
                    visibility=visibility, permissions=permissions, prompt_payload=payload,
                    warnings=sorted(set(warnings)), lock_digest=digest(lock_data), conflict_report=[])
+    if version2 and example_pool and examples_mode == 'auto' and not selected:
+        raise QGError('NO_EXAMPLES_SELECTED', 3, {'pool': example_pool, 'omitted': omitted})
+    if version2:
+        evidence = {}
+        used_evidence = {identity for rule in selected_rules for identity in rule['evidence_ids']}
+        for pack in packs:
+            for ref in pack.get('evidence_refs', []):
+                if ref['evidence_id'] not in used_evidence:
+                    continue
+                if ref['evidence_id'] in evidence and evidence[ref['evidence_id']] != ref:
+                    raise QGError('EVIDENCE_REFERENCE_CONFLICT', 3)
+                evidence[ref['evidence_id']] = ref
+        context.update(schema_version='quillgrain.compiled-context/v2', corpora=lock_data['corpora'],
+                       corpus_materials=[lineages[e['id']] for e in selected if e['id'] in lineages], example_mode=examples_mode,
+                       evidence_refs=sorted(evidence.values(), key=lambda x: x['evidence_id']))
     context["build_id"] = digest(context)
     verify_context(context)
     return context, lock_data

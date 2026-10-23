@@ -1,5 +1,9 @@
 # Read-only private intake
 
+For approved snapshots stored in a dedicated PRIVATE repository, see the newer
+[versioned corpus workflow](corpus-repository.md). The source-root workflow below
+remains supported; its machine paths and full inventories remain local.
+
 `qg corpus inventory --config source-roots.local.json --out inventory.json` accepts
 trusted local configuration with a `roots` array. Each entry declares `alias`, an
 absolute `path`, `source_kind`, `language`, `register`, `rights`, `permissions`, and

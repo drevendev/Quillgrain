@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.corpus-source/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,159}$"
+    },
+    "work_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,159}$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "authorship": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "registers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "usage": {
+      "enum": [
+        "reference",
+        "candidate",
+        "evaluation",
+        "excluded"
+      ]
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private",
+        "local_only"
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "local_analysis": {
+          "type": "boolean"
+        },
+        "retrieval": {
+          "type": "boolean"
+        },
+        "private_git_excerpt": {
+          "type": "boolean"
+        },
+        "approved_model_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "public_redistribution": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "local_analysis",
+        "retrieval",
+        "private_git_excerpt",
+        "approved_model_hosts",
+        "public_redistribution"
+      ]
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "full",
+            "excerpt",
+            "metadata_only"
+          ]
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "by": {
+              "type": "string"
+            },
+            "basis": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "by",
+            "basis"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "approval"
+      ]
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "credits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "reference",
+        "credits",
+        "notes"
+      ]
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "original_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "extraction_profile": {
+            "type": "string"
+          },
+          "upstream_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "original_sha256",
+          "text_sha256",
+          "extraction_profile"
+        ]
+      }
+    },
+    "revoked": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "work_id",
+    "title",
+    "authorship",
+    "language",
+    "registers",
+    "tags",
+    "usage",
+    "visibility",
+    "permissions",
+    "storage",
+    "origin",
+    "revisions",
+    "revoked"
+  ]
+}

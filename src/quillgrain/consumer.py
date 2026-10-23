@@ -24,8 +24,14 @@ def verify_bundle(value, *, model_host=None, language=None, register=None, tags=
             raise QGError("VOICE_BUNDLE_TOO_LARGE", 3)
         ctx = verify_context(value["context"])
         lock = value["lock"]
-        if not isinstance(lock, dict) or set(lock) != {"engine_version", "packs"}:
+        expected = {'engine_version', 'packs'}
+        if ctx['schema_version'] == 'quillgrain.compiled-context/v2':
+            expected |= {'schema_version', 'corpora'}
+        if not isinstance(lock, dict) or set(lock) != expected:
             raise QGError("VOICE_LOCK_SCHEMA", 3)
+        if ctx['schema_version'] == 'quillgrain.compiled-context/v2' and (
+                lock['schema_version'] != 'quillgrain.lock/v2' or lock['corpora'] != ctx['corpora']):
+            raise QGError('VOICE_LOCK_SCHEMA', 3)
         if digest(lock) != ctx["lock_digest"] or lock["packs"] != ctx["packs"] or lock["engine_version"] != ctx["engine_version"]:
             raise QGError("LOCK_DIGEST_MISMATCH", 3)
         unique(ctx["packs"])

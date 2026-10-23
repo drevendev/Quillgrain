@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 ROOT_FILES = {"README.md", "AGENTS.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md",
               "pyproject.toml", "MANIFEST.in", ".gitignore", "requirements-dev.lock.txt"}
 ROOT_DIRS = {"src", "schemas", "tests", "examples", "scripts", "docs", ".github", "templates", "skills"}
-DENIED = {".private", "corpus", "runs", "exports", "Quillgrain_Dreven", "voice_reference.txt", "source-roots.local.json"}
+DENIED = {".private", "corpus", "runs", "exports", "Quillgrain_Dreven", "Quillgrain_Corpus", "Quillgrain_Voice_Dreven", "voice_reference.txt", "source-roots.local.json"}
 SKIP = {".git", ".venv", "__pycache__", ".pytest_cache", "build", "dist"}
 
 

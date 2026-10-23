@@ -5,7 +5,7 @@ import os
 import platform
 import sys
 from pathlib import Path
-from . import __version__, corpus, evaluation, feedback, duel, pairwise
+from . import __version__, corpus, evaluation, feedback, duel, pairwise, catalog
 from .adapters.scriptorium import analyze, import_observation
 from .checks import check
 from .compose import compile_context, load_chain
@@ -18,7 +18,33 @@ def parser():
     p.add_argument("--version", action="version", version=__version__)
     commands = p.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
+    explain = commands.add_parser('explain')
+    explain.add_argument('--context', required=True)
+    explain.add_argument('--out', required=True)
     cp = commands.add_parser("corpus").add_subparsers(dest="action", required=True)
+    for name in ('validate', 'search', 'add', 'fragment', 'impact', 'init'):
+        cmd = cp.add_parser(name)
+        cmd.add_argument('--corpus', required=True, type=Path)
+        if name == 'validate':
+            cmd.add_argument('--verify-content', action='store_true')
+        if name == 'init':
+            cmd.add_argument('--approval', required=True, help='Local JSON with by and basis')
+        if name == 'search':
+            cmd.add_argument('--tag', action='append', default=[])
+            cmd.add_argument('--language')
+            cmd.add_argument('--register')
+            cmd.add_argument('--out', required=True)
+        if name in ('add', 'fragment'):
+            cmd.add_argument('--metadata', required=True)
+        if name == 'add':
+            cmd.add_argument('--original', required=True)
+            cmd.add_argument('--text', required=True)
+            cmd.add_argument('--extraction-profile', required=True)
+        if name == 'impact':
+            cmd.add_argument('--source-id', required=True)
+            cmd.add_argument('--pack', action='append', default=[])
+            cmd.add_argument('--context', action='append', default=[])
+            cmd.add_argument('--out', required=True)
     inv = cp.add_parser("inventory")
     inv.add_argument("--config", required=True)
     inv.add_argument("--out", required=True)
@@ -42,6 +68,8 @@ def parser():
         cmd = pk.add_parser(action)
         cmd.add_argument("--pack", required=True, type=Path)
         cmd.add_argument("--bind", action="append", default=[], metavar="ID=PATH")
+        cmd.add_argument('--corpus-bind', action='append', default=[], metavar='ID=PATH')
+        cmd.add_argument('--examples', choices=['auto', 'none'], default='auto')
         if action == "build":
             cmd.add_argument("--register", required=True)
             cmd.add_argument("--language", default="ru")
@@ -103,6 +131,10 @@ def text(path):
 
 
 def run(a):
+    if a.command == 'explain':
+        result = catalog.explain(read_json(a.context))
+        write_json(a.out, result)
+        return {'status': 'EXPLAINED', 'materials': len(result['materials'])}
     if a.command == 'duel':
         if a.action == 'serve':
             duel.serve(a.session, port=a.port)
@@ -122,6 +154,28 @@ def run(a):
         return dict(engine=__version__, python=platform.python_version(), platform=platform.system(),
                     model_required=False, telemetry=False, scriptorium="OPTIONAL_NOT_PROBED")
     if a.command == "corpus":
+        if a.action == 'init':
+            catalog.init(a.corpus, approval=read_json(a.approval))
+            return {'status': 'INITIALIZED', 'visibility': 'private'}
+        if a.action == 'add':
+            revision = catalog.ingest(a.corpus, read_json(a.metadata), Path(a.original).read_bytes(),
+                                      text(a.text), extraction_profile=a.extraction_profile)
+            return {'status': 'IMPORTED', 'revision': revision['id']}
+        if a.action == 'fragment':
+            catalog.add_fragment(a.corpus, read_json(a.metadata))
+            return {'status': 'FRAGMENT_RECORDED'}
+        if a.action in ('validate', 'search', 'impact'):
+            data = catalog.load(a.corpus, verify_content=getattr(a, 'verify_content', False))
+            if a.action == 'validate':
+                return {'status': 'VALID', 'identity': data['identity'], 'sources': len(data['sources']),
+                        'fragments': len(data['fragments']), 'content_verified': a.verify_content}
+            if a.action == 'search':
+                result = catalog.search(data, tags=a.tag, language=a.language, register=a.register)
+                write_json(a.out, result)
+                return {'status': 'FOUND', 'sources': len(result)}
+            result = catalog.impact(a.source_id, a.pack, [read_json(p) for p in a.context])
+            write_json(a.out, result)
+            return {'status': 'IMPACT_RECORDED', 'packs': len(result['affected'])}
         cfg = a.config
         if not cfg:
             private_home = os.environ.get("QUILLGRAIN_PRIVATE_HOME")
@@ -133,6 +187,14 @@ def run(a):
             return corpus.inventory(config, a.out)
         return corpus.prepare(read_jsonl(a.selection), config, a.out)
     if a.command == "pack":
+        corpus_bindings = {}
+        for binding in a.corpus_bind:
+            if '=' not in binding:
+                raise QGError('BINDING_REQUIRES_ID_EQUALS_PATH')
+            identity, path = binding.split('=', 1)
+            if identity in corpus_bindings:
+                raise QGError('DUPLICATE_BINDING')
+            corpus_bindings[identity] = Path(path)
         bindings = {}
         for binding in a.bind:
             if "=" not in binding:
@@ -148,13 +210,33 @@ def run(a):
             if final["permissions"]["retrieval"] and final["permissions"]["approved_model_hosts"]:
                 for mode in modes:
                     compile_context(a.pack, bindings=bindings, language=mode["language"], register=mode["register"],
-                                    model_host=final["permissions"]["approved_model_hosts"][0], max_chars=1000000)
-            return {"status": "VALID", "packs": [p["id"] for p in chain]}
+                                    model_host=final["permissions"]["approved_model_hosts"][0], max_chars=1000000,
+                                    corpus_bindings=corpus_bindings, examples_mode=a.examples)
+            for pack in chain:
+                for dep in pack.get('corpus_dependencies', []):
+                    if dep['id'] in corpus_bindings:
+                        data = catalog.load(corpus_bindings[dep['id']])
+                        if data['identity'] != dep:
+                            raise QGError('STALE_CORPUS', 3)
+                        for ref in pack.get('evidence_refs', []):
+                            if ref['corpus_id'] == dep['id'] and (ref['source_id'] not in data['sources'] or
+                                (ref['revision_id'] is not None and ref['revision_id'] not in {r['id'] for r in data['sources'][ref['source_id']]['revisions']})):
+                                raise QGError('EVIDENCE_REFERENCE_UNAVAILABLE', 3)
+                        for ref in pack.get('example_refs', []):
+                            if ref['corpus_id'] == dep['id'] and ref['status'] == 'REVIEWED':
+                                hosts = sorted(set(ref['permissions']['approved_model_hosts']) &
+                                               set(data['sources'].get(ref['source_id'], {}).get('permissions', {}).get('approved_model_hosts', [])))
+                                if not hosts:
+                                    raise QGError('CORPUS_HOST_OR_RETRIEVAL_DENIED', 3)
+                                catalog.resolve(data, ref, model_host=hosts[0])
+            return {"status": "VALID", "packs": [p["id"] for p in chain],
+                    'corpus_validation': 'BOUND_REFERENCES_CHECKED' if corpus_bindings else 'NOT_REQUESTED'}
         host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "patchpitch-legacy": "ollama", "patchpitch": "ollama"}[a.target]
         try:
             context, lock = compile_context(a.pack, bindings=bindings, register=a.register, language=a.language,
                                             target=a.target, model_host=host, tags=a.tag, max_chars=a.max_chars,
-                                            public=a.public, lock=a.lock, example_pool=a.example_pool)
+                                            public=a.public, lock=a.lock, example_pool=a.example_pool,
+                                            corpus_bindings=corpus_bindings, examples_mode=a.examples)
         except QGError as exc:
             # Keep potentially private rule IDs in the explicitly chosen local output,
             # while terminal diagnostics remain short and path/text-free.
