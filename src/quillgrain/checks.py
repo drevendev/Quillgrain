@@ -8,21 +8,41 @@ from .io import sha, QGError
 def regions(text):
     """Conservative Markdown/plain-text regions, keeping original offsets."""
     labels = ["narration"] * len(text)
-    fence, offset = None, 0
+    fence, offset, lazy_quote, comment = None, 0, False, False
     for line in text.splitlines(keepends=True):
         stripped = line.lstrip()
         marker = re.match(r"(`{3,}|~{3,})", stripped)
         if fence or marker:
+            lazy_quote = False
             labels[offset:offset + len(line)] = ["code"] * len(line)
             if marker:
                 if fence and marker[1][0] == fence[0] and len(marker[1]) >= len(fence):
                     fence = None
                 elif not fence:
                     fence = marker[1]
-        elif stripped.startswith(">"):
+        elif stripped.startswith(">") or (lazy_quote and stripped.strip()):
             labels[offset:offset + len(line)] = ["quote"] * len(line)
+            lazy_quote = True
         elif re.match(r"[—–]\s", stripped):
             labels[offset:offset + len(line)] = ["dialogue"] * len(line)
+        if not stripped.strip():
+            lazy_quote = False
+        # Multiline and inline comments are excluded; an unclosed comment quarantines EOF.
+        pos = 0
+        while pos < len(line):
+            if labels[offset + pos] == 'code':
+                pos += 1
+                continue
+            if not comment and line.startswith('<!--', pos):
+                comment = True
+            if comment:
+                if line.startswith('-->', pos):
+                    labels[offset + pos:offset + pos + 3] = ['comment'] * 3
+                    pos += 3
+                    comment = False
+                    continue
+                labels[offset + pos] = 'comment'
+            pos += 1
         offset += len(line)
     for pattern, label in [(r"`[^`\n]+`", "code"), (r'"[^"\n]*"|«[^»]*»|“[^”]*”', "quote")]:
         for match in re.finditer(pattern, text):
@@ -53,7 +73,7 @@ def check(text, context, scopes=()):
             skipped.append(rule["id"] + ":HUMAN_REVIEW_REQUIRED")
             continue
         channel = scope.get("channel", "all")
-        allowed = [lab not in ("code", "quote") and (channel == "all" or lab == channel)
+        allowed = [lab not in ("code", "quote", "comment") and (channel == "all" or lab == channel)
                    and (not scope.get("characters") or characters[i] in scope["characters"])
                    for i, lab in enumerate(labels)]
         if scope.get("characters") and not any(allowed):

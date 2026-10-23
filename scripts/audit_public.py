@@ -15,7 +15,8 @@ SKIP = {".git", ".venv", "__pycache__", ".pytest_cache", "build", "dist"}
 def source_members(root):
     if (root / ".git").exists():
         tracked = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, check=True).stdout
-        candidates = [root / name.decode("utf-8") for name in tracked.split(b"\0") if name]
+        untracked = subprocess.run(['git','-C',str(root),'ls-files','--others','--exclude-standard','-z'], capture_output=True, check=True).stdout
+        candidates = [root / name.decode('utf-8') for name in set((tracked + untracked).split(b'\0')) if name]
     else:
         candidates = root.rglob("*")
     for file in candidates:

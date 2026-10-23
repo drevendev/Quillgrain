@@ -5,12 +5,12 @@ import os
 import platform
 import sys
 from pathlib import Path
-from . import __version__, corpus, evaluation, feedback
+from . import __version__, corpus, evaluation, feedback, duel, pairwise
 from .adapters.scriptorium import analyze, import_observation
 from .checks import check
 from .compose import compile_context, load_chain
 from .export import export
-from .io import QGError, read_json, read_jsonl, sha, write_json
+from .io import QGError, read_json, read_jsonl, sha, write_json, publish_bundle, canonical
 
 
 def parser():
@@ -45,9 +45,10 @@ def parser():
         if action == "build":
             cmd.add_argument("--register", required=True)
             cmd.add_argument("--language", default="ru")
-            cmd.add_argument("--target", choices=["chatgpt", "codex", "patchpitch-legacy"], default="chatgpt")
+            cmd.add_argument("--target", choices=["chatgpt", "codex", "patchpitch-legacy", "patchpitch"], default="chatgpt")
             cmd.add_argument("--host", default=None)
             cmd.add_argument("--tag", action="append", default=[])
+            cmd.add_argument("--example-pool", help="Use only examples carrying this explicitly selected tag")
             cmd.add_argument("--max-chars", type=int, default=8000)
             cmd.add_argument("--public", action="store_true")
             cmd.add_argument("--lock")
@@ -76,6 +77,24 @@ def parser():
     rp = ev.add_parser("report")
     rp.add_argument("--runs", required=True)
     rp.add_argument("--out", required=True)
+    du = commands.add_parser('duel').add_subparsers(dest='action', required=True)
+    ds = du.add_parser('serve')
+    ds.add_argument('--session', required=True)
+    ds.add_argument('--port', type=int, default=8767)
+    for name in ('prepare', 'pair-prepare'):
+        dp = du.add_parser(name)
+        dp.add_argument('--cases', required=True)
+        dp.add_argument('--out', required=True)
+        dp.add_argument('--order-seed', type=int, required=True)
+        dp.add_argument('--mapping-seed', type=int, required=True)
+        dp.add_argument('--synthetic', action='store_true')
+        if name == 'pair-prepare':
+            dp.add_argument('--reference-works', help='JSON array of Common/reference work IDs to exclude')
+            dp.add_argument('--blog-category', choices=['denis', 'techprose'], default='denis', help='Explicit approved category replacement')
+    for action in ('reveal', 'pair-reveal'):
+        dr = du.add_parser(action)
+        for name in ('session','answers','key','out'):
+            dr.add_argument('--'+name, required=True)
     return p
 
 
@@ -84,6 +103,21 @@ def text(path):
 
 
 def run(a):
+    if a.command == 'duel':
+        if a.action == 'serve':
+            duel.serve(a.session, port=a.port)
+            return {'status':'STOPPED'}
+        engine = pairwise if a.action.startswith('pair-') else duel
+        if a.action in ('prepare', 'pair-prepare'):
+            cases = read_json(a.cases)
+            extra = {'reference_works': read_json(a.reference_works) if a.reference_works else None, 'blog_group': a.blog_category} if a.action == 'pair-prepare' else {}
+            blind, _ = engine.make_session(cases, a.out, order_seed=a.order_seed,
+                mapping_seed=a.mapping_seed, synthetic=a.synthetic, **extra)
+            return {'status':'READY_FOR_OWNER' if not a.synthetic else 'SYNTHETIC', 'cases':len(blind['cases']),
+                    'session_id':blind['session_id'], 'correspondence':'WITHHELD'}
+        revealed = engine.reveal(read_json(a.session), read_json(a.answers), read_json(a.key))
+        publish_bundle(a.out, {'reveal.json':canonical(revealed)})
+        return {'status':'REVEAL_PREPARED', 'cases':len(revealed['cases'])}
     if a.command == "doctor":
         return dict(engine=__version__, python=platform.python_version(), platform=platform.system(),
                     model_required=False, telemetry=False, scriptorium="OPTIONAL_NOT_PROBED")
@@ -116,16 +150,20 @@ def run(a):
                     compile_context(a.pack, bindings=bindings, language=mode["language"], register=mode["register"],
                                     model_host=final["permissions"]["approved_model_hosts"][0], max_chars=1000000)
             return {"status": "VALID", "packs": [p["id"] for p in chain]}
-        host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "patchpitch-legacy": "ollama"}[a.target]
+        host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "patchpitch-legacy": "ollama", "patchpitch": "ollama"}[a.target]
         try:
             context, lock = compile_context(a.pack, bindings=bindings, register=a.register, language=a.language,
                                             target=a.target, model_host=host, tags=a.tag, max_chars=a.max_chars,
-                                            public=a.public, lock=a.lock)
+                                            public=a.public, lock=a.lock, example_pool=a.example_pool)
         except QGError as exc:
             # Keep potentially private rule IDs in the explicitly chosen local output,
             # while terminal diagnostics remain short and path/text-free.
-            write_json(Path(a.out) / "build-error.json", {"status": "CONFLICT" if "CONFLICT" in exc.code else "ERROR",
-                                                        "code": exc.code, "details": {} if a.public else exc.details})
+            try:
+                publish_bundle(a.out, {'build-error.json':canonical({
+                    'status':'CONFLICT' if 'CONFLICT' in exc.code else 'ERROR',
+                    'code':exc.code, 'details':{} if a.public else exc.details})})
+            except QGError:
+                pass  # Never contaminate an occupied export or follow its links on failure.
             raise
         export(context, lock, a.out)
         return {"status": "BUILT", "build_id": context["build_id"], "visibility": context["visibility"],

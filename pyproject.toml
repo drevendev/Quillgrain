@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quillgrain"
-version = "0.1.0rc2"
+version = "0.1.0rc3"
 description = "Every voice has a grain. Portable author-voice tooling."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ qg = "quillgrain.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-quillgrain = ["schemas/*.json", "resources/SKILL.md"]
+quillgrain = ["schemas/*.json", "resources/SKILL.md", "web/*.html", "web/*.js", "web/*.css", "web_pairwise/*.html", "web_pairwise/*.js", "web_pairwise/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

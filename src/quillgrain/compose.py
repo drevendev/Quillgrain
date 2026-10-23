@@ -67,6 +67,27 @@ def matches(scope, language, register, tags):
         not scope.get("tags") or set(scope["tags"]) <= set(tags))
 
 
+def scope_contains(broad, narrow):
+    # Language/register/tags have already been selected for this concrete build.
+    bc, nc = broad.get('channel', 'all'), narrow.get('channel', 'all')
+    bchars, nchars = set(broad.get('characters', [])), set(narrow.get('characters', []))
+    if nchars and nc == 'all':
+        nc = 'dialogue'
+    if bchars and bc == 'all':
+        bc = 'dialogue'
+    return (bc == 'all' or bc == nc) and (not bchars or bool(nchars) and nchars <= bchars)
+
+
+def scopes_overlap(a, b):
+    ac, bc = a.get('channel', 'all'), b.get('channel', 'all')
+    ca, cb = set(a.get('characters', [])), set(b.get('characters', []))
+    if ca and ac == 'all':
+        ac = 'dialogue'
+    if cb and bc == 'all':
+        bc = 'dialogue'
+    return (ac == 'all' or bc == 'all' or ac == bc) and (not ca or not cb or bool(ca & cb))
+
+
 def rule_text(rule):
     scope = rule["scope"]
     label = scope.get("channel", "all")
@@ -83,11 +104,15 @@ def example_text(example):
 
 def compile_context(root, *, bindings=None, overlays=(), language="ru", register="essay",
                     target="chatgpt", model_host="chatgpt", tags=(), max_chars=8000,
-                    public=False, lock=None):
+                    public=False, lock=None, example_pool=None):
+    if example_pool is not None and example_pool not in tags:
+        raise QGError("EXAMPLE_POOL_TAG_REQUIRED", 3)
     if max_chars < 1:
         raise QGError("INVALID_BUDGET")
     if target == "patchpitch-legacy":
         max_chars = min(max_chars, 1200)
+    if len(POLICY) > max_chars:
+        raise QGError('BUDGET_EXCEEDED', 3)
     packs = load_chain(root, bindings)
     for overlay in overlays:
         chain = load_chain(overlay, {**(bindings or {}), packs[-1]["id"]: root})
@@ -144,10 +169,13 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
             rules[rule["id"]] = rule
         candidates.extend(pack["examples"])
     for rule in rules.values():
-        if set(rule.get("conflicts_with", [])) & rules.keys():
+        conflicts = {identity for identity in set(rule.get('conflicts_with', [])) & rules.keys()
+                     if scopes_overlap(rule['scope'], rules[identity]['scope'])}
+        if conflicts:
             raise QGError("RULE_CONFLICT", 3, {"rule_id": rule["id"], "conflicts_with": sorted(set(rule.get("conflicts_with", [])) & rules.keys())})
         for other in rules.values():
-            if rule["scope"] != other["scope"]:
+            if not (rule['kind'] == 'constraint' or rule.get('required')) or not (
+                    other['kind'] == 'constraint' or other.get('required')) or not scope_contains(other['scope'], rule['scope']):
                 continue
             if rule["enforcement"] == "required_literal" and other["enforcement"] == "forbidden_literal":
                 if other["parameters"]["literal"] in rule["parameters"]["literal"]:
@@ -190,6 +218,8 @@ def compile_context(root, *, bindings=None, overlays=(), language="ru", register
             reason = "private_to_public"
         elif ex["tags"] and not set(ex["tags"]) <= set(tags):
             reason = "explicit_tags"
+        elif example_pool is not None and example_pool not in ex["tags"]:
+            reason = "example_pool"
         if reason:
             omitted.append({"id": ex["id"], "reason": reason})
         else:

@@ -43,4 +43,6 @@ def verify_context(context):
         raise QGError("CONTEXT_DIGEST_MISMATCH", 3)
     if len(context["prompt_payload"]) != context["budget"]["used_codepoints"]:
         raise QGError("CONTEXT_BUDGET_MISMATCH", 3)
+    if not 0 <= context['budget']['used_codepoints'] <= context['budget']['max_codepoints']:
+        raise QGError('BUDGET_EXCEEDED', 3)
     return context

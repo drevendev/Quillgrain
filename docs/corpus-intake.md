@@ -39,3 +39,17 @@ is outside the v0.1 threat model; use trusted roots and a stable read-only snaps
 `feedback record` stores before/after, hashes, reason and scope in the chosen private
 output. It activates no rules. Fact corrections and one-off changes cannot propose
 a voice rule through that command. Owner decisions remain separate.
+
+## Изменение извлечения в 0.1.0rc3
+
+`qg-narration-nfc-v2` исключает многострочные HTML-комментарии и продолженные
+blockquote до границы блока. Незакрытые/неоднозначные блоки консервативно исключаются.
+Прежние манифесты v1 не переинтерпретируются: их нужно явно пересобрать из неизменённых
+источников. Разбор Markdown и статус authored не доказывают авторство.
+
+Разрешение и точный allowlist повторно проверяются непосредственно перед каждым
+чтением. Пустой allowlist разрешает ноль файлов. Подготовка создаёт новый каталог;
+занятый путь, symlink/reparse и запись в исходники отклоняются. Неудачная транзакция
+может оставить каталог `.qg-incomplete-*`, который не является готовым результатом.
+Это локальная транзакция одного оператора, не защита от злонамеренной конкурентной
+подмены дерева файлов.
