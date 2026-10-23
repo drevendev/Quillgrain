@@ -1,5 +1,5 @@
 """Private, versioned corpus data. Explicit local IO; no network or source execution."""
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from .contracts import validate, unique, verify_context
 from .io import QGError, read_json, write_json, write_bytes, sha, digest, is_link, safe_destination
 
@@ -9,7 +9,7 @@ SCHEMA = 'quillgrain.corpus/v1'
 def read_member(root, relative):
     root = Path(root).absolute()
     rel = Path(relative)
-    if rel.is_absolute() or rel.drive or '..' in rel.parts or '\\' in str(relative):
+    if rel.is_absolute() or rel.drive or PureWindowsPath(relative).drive or '..' in rel.parts or '\\' in str(relative):
         raise QGError('CORPUS_PATH_ESCAPE', 3)
     for part in (*reversed(root.parents), root, *[root.joinpath(*rel.parts[:i]) for i in range(1, len(rel.parts) + 1)]):
         if is_link(part):

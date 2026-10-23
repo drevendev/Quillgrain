@@ -5,7 +5,7 @@ import json
 import os
 import stat
 import uuid
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 class QGError(Exception):
@@ -91,7 +91,7 @@ def publish_bundle(output, members):
     files = {}
     for name, data in members.items():
         rel = Path(name)
-        if rel.is_absolute() or rel.drive or '..' in rel.parts or not rel.parts:
+        if rel.is_absolute() or rel.drive or PureWindowsPath(name).drive or '..' in rel.parts or not rel.parts:
             raise QGError('PATH_ESCAPE', 3)
         if not isinstance(data, bytes):
             raise QGError('BUNDLE_BYTES_REQUIRED')
@@ -117,7 +117,7 @@ def read_jsonl(path):
 def bounded(root, relative):
     root = Path(root).resolve(strict=True)
     relative = Path(relative)
-    if relative.is_absolute() or ".." in relative.parts or relative.drive:
+    if relative.is_absolute() or ".." in relative.parts or relative.drive or PureWindowsPath(relative).drive:
         raise QGError("PATH_ESCAPE", 3)
     target = (root / relative).resolve(strict=True)
     if not target.is_relative_to(root):

@@ -224,6 +224,13 @@ def test_corpus_parent_junction_is_denied(corpus_setup, tmp_path):
         catalog.load(alias/root.name)
 
 
+@pytest.mark.parametrize('relative',['C:/outside.txt','C:outside.txt','//server/share/file.txt','../outside.txt'])
+def test_cross_platform_absolute_paths_denied(corpus_setup, relative):
+    root, *_ = corpus_setup
+    with pytest.raises(QGError,match='CORPUS_PATH_ESCAPE'):
+        catalog.read_member(root,relative)
+
+
 def test_cli_catalog_and_compilation(corpus_setup, tmp_path):
     from quillgrain.cli import main
     root, metadata, _, _, _, _, path = corpus_setup

@@ -2,7 +2,7 @@
 import os
 import re
 import unicodedata
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from .checks import regions
 from .contracts import validate
 from .io import QGError, bounded, digest, sha, read_json, write_json, canonical, publish_bundle, is_link
@@ -52,7 +52,7 @@ def config_roots(config):
                 raise QGError('INVALID_SOURCE_ALLOWLIST')
             for name in included:
                 rel = Path(name)
-                if rel.is_absolute() or rel.drive or '..' in rel.parts or '\\' in name:
+                if rel.is_absolute() or rel.drive or PureWindowsPath(name).drive or '..' in rel.parts or '\\' in name:
                     raise QGError('INVALID_SOURCE_ALLOWLIST')
         if type(entry.get('max_files', 10000)) is not int or entry.get('max_files', 10000) < 0:
             raise QGError('INVALID_SOURCE_LIMIT')
@@ -70,7 +70,7 @@ def authorize(entry, relative):
     if not entry['permissions']['local_analysis']:
         raise QGError('SOURCE_DENIED', 3)
     rel = Path(relative)
-    if rel.is_absolute() or rel.drive or '..' in rel.parts or '\\' in relative:
+    if rel.is_absolute() or rel.drive or PureWindowsPath(relative).drive or '..' in rel.parts or '\\' in relative:
         raise QGError('PATH_ESCAPE', 3)
     if 'include_files' in entry and rel.as_posix() not in entry['include_files']:
         raise QGError('SOURCE_NOT_ALLOWLISTED', 3)
