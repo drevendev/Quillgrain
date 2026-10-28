@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import stat
 import uuid
 from pathlib import Path, PureWindowsPath
@@ -30,7 +31,7 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def read_json(path):
+def _strict_json(text):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -38,9 +39,13 @@ def read_json(path):
                 raise QGError("DUPLICATE_JSON_KEY")
             result[key] = value
         return result
+    return json.loads(text, object_pairs_hook=pairs,
+                      parse_constant=lambda _: (_ for _ in ()).throw(QGError("NONFINITE_JSON")))
+
+
+def read_json(path):
     with Path(path).open(encoding="utf-8-sig") as stream:
-        return json.load(stream, object_pairs_hook=pairs,
-                         parse_constant=lambda _: (_ for _ in ()).throw(QGError("NONFINITE_JSON")))
+        return _strict_json(stream.read())
 
 
 def write_json(path, value):
@@ -99,19 +104,32 @@ def publish_bundle(output, members):
     output.parent.mkdir(parents=True, exist_ok=True)
     safe_destination(output)
     staging = output.with_name('.qg-incomplete-' + uuid.uuid4().hex)
+    parent = output.parent.resolve()
     staging.mkdir()
-    for rel, data in files.items():
-        write_bytes(staging / rel, data)
-    safe_destination(output)
-    if os.path.lexists(output):
-        raise QGError('OUTPUT_ALREADY_EXISTS', 3)
-    # Single-operator local transaction; not a lock against a malicious concurrent writer.
-    staging.rename(output)
+    try:
+        for rel, data in files.items():
+            write_bytes(staging / rel, data)
+        safe_destination(output)
+        if os.path.lexists(output):
+            raise QGError('OUTPUT_ALREADY_EXISTS', 3)
+        # Single-operator local transaction; not a lock against a malicious concurrent writer.
+        staging.rename(output)
+    except BaseException as error:
+        try:
+            # Remove only this transaction's directory, under its original parent.
+            if staging.parent.resolve() != parent:
+                raise QGError('STAGING_PARENT_CHANGED', 3)
+            safe_destination(staging)
+            if staging.exists():
+                shutil.rmtree(staging)
+        except (OSError, QGError):
+            error.add_note('Incomplete bundle retained because staging cleanup failed.')
+        raise
 
 
 def read_jsonl(path):
-    return [json.loads(line) for line in Path(path).read_text(encoding="utf-8-sig").splitlines()
-            if line.strip()]
+    with Path(path).open(encoding="utf-8-sig") as stream:
+        return [_strict_json(line) for line in stream if line.strip()]
 
 
 def bounded(root, relative):
