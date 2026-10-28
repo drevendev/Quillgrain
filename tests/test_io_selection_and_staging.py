@@ -13,6 +13,10 @@ from quillgrain import io
     ('{"score":NaN}', 'NONFINITE_JSON'),
     ('{"score":Infinity}', 'NONFINITE_JSON'),
     ('{"score":-Infinity}', 'NONFINITE_JSON'),
+    ('{"score":1e999}', 'NONFINITE_JSON'),
+    ('{"score":-1e999}', 'NONFINITE_JSON'),
+    ('{"nested":{"score":1e999}}', 'NONFINITE_JSON'),
+    ('{"nested":[-1e999]}', 'NONFINITE_JSON'),
 ])
 def test_json_and_selection_jsonl_reject_the_same_ambiguities(tmp_path, loader, text, code):
     path = tmp_path / 'selection.jsonl'

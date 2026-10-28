@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import stat
@@ -32,6 +33,12 @@ def sha(data):
 
 
 def _strict_json(text):
+    def finite_float(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise QGError("NONFINITE_JSON")
+        return value
+
     def pairs(items):
         result = {}
         for key, value in items:
@@ -39,7 +46,7 @@ def _strict_json(text):
                 raise QGError("DUPLICATE_JSON_KEY")
             result[key] = value
         return result
-    return json.loads(text, object_pairs_hook=pairs,
+    return json.loads(text, object_pairs_hook=pairs, parse_float=finite_float,
                       parse_constant=lambda _: (_ for _ in ()).throw(QGError("NONFINITE_JSON")))
 
 
