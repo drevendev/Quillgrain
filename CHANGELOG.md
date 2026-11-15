@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — portable private skill recipes
+
+Add pinned rules-only multi-register Codex/Claude assembly with explicit host
+snapshots, reproducible archives, portable context verification and read-only
+installed comparisons. Bundle the identical word counter with feasible next-part
+planning; detect total/part conflicts without generating or editing prose.
+
+
 ## Unreleased — local IO repairs
 
 Apply duplicate-key and nonfinite-value rejection to corpus selection JSONL as
