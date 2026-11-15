@@ -5,11 +5,12 @@ import os
 import platform
 import sys
 from pathlib import Path
-from . import __version__, corpus, evaluation, feedback, duel, pairwise, catalog
+from . import __version__, corpus, evaluation, feedback, duel, pairwise, catalog, lengths, quickduel, review
 from .adapters.scriptorium import analyze, import_observation
 from .checks import check
 from .compose import compile_context, load_chain
 from .export import export
+from .skills import SKILL_ROOTS, install, verify_skill_context
 from .io import QGError, read_json, read_jsonl, sha, write_json, publish_bundle, canonical
 
 
@@ -18,6 +19,18 @@ def parser():
     p.add_argument("--version", action="version", version=__version__)
     commands = p.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
+    lengths.arguments(commands.add_parser('length', help='Check total and per-part word budgets without generation'))
+    sk = commands.add_parser('skill', help='Use Quillgrain inside the current writing assistant').add_subparsers(dest='action', required=True)
+    si = sk.add_parser('install', help='Create a portable skill; no model server or API key needed')
+    si.add_argument('--agent', choices=sorted(SKILL_ROOTS), required=True)
+    destination = si.add_mutually_exclusive_group(required=True)
+    destination.add_argument('--project', type=Path, help='Install into this project for the selected agent')
+    destination.add_argument('--out', type=Path, help='Create a standalone skill folder at this exact path')
+    si.add_argument('--bundle', type=Path, help='Optionally bind an exported context and lock to the skill')
+    cv = commands.add_parser('context').add_subparsers(dest='action', required=True).add_parser('verify')
+    cv.add_argument('--context', required=True)
+    cv.add_argument('--host', required=True, help='Actual assistant destination, e.g. codex or claude')
+    cv.add_argument('--lock')
     explain = commands.add_parser('explain')
     explain.add_argument('--context', required=True)
     explain.add_argument('--out', required=True)
@@ -73,7 +86,7 @@ def parser():
         if action == "build":
             cmd.add_argument("--register", required=True)
             cmd.add_argument("--language", default="ru")
-            cmd.add_argument("--target", choices=["chatgpt", "codex", "patchpitch-legacy", "patchpitch"], default="chatgpt")
+            cmd.add_argument("--target", choices=["chatgpt", "codex", "claude", "patchpitch-legacy", "patchpitch"], default="chatgpt")
             cmd.add_argument("--host", default=None)
             cmd.add_argument("--tag", action="append", default=[])
             cmd.add_argument("--example-pool", help="Use only examples carrying this explicitly selected tag")
@@ -109,6 +122,21 @@ def parser():
     ds = du.add_parser('serve')
     ds.add_argument('--session', required=True)
     ds.add_argument('--port', type=int, default=8767)
+    qp = du.add_parser('quick-plan', help='Freeze source-once pairs before generating any outputs')
+    qp.add_argument('--sources', required=True)
+    qp.add_argument('--seed', required=True, type=int)
+    qp.add_argument('--budget', type=int, default=30)
+    qp.add_argument('--out', required=True)
+    qq = du.add_parser('quick-prepare', help='Package only the two outputs assigned by a frozen plan')
+    qq.add_argument('--plan', required=True)
+    qq.add_argument('--cases', required=True)
+    qq.add_argument('--synthetic', action='store_true')
+    qq.add_argument('--out', required=True)
+    qr = du.add_parser('report', help='Review committed answers after an explicit owner stop')
+    for name in ('session', 'answers', 'key', 'out'):
+        qr.add_argument('--'+name, required=True)
+    qr.add_argument('--source-map', help='Optional frozen mapping for historical files without source IDs')
+    qr.add_argument('--stop', action='store_true', help='Owner explicitly ends voting and requests a partial review')
     for name in ('prepare', 'pair-prepare'):
         dp = du.add_parser(name)
         dp.add_argument('--cases', required=True)
@@ -131,6 +159,18 @@ def text(path):
 
 
 def run(a):
+    if a.command == 'length':
+        try:
+            return lengths.from_arguments(a)
+        except ValueError:
+            raise QGError('INVALID_WORD_RANGE')
+    if a.command == 'skill':
+        return install(a.agent, project=a.project, output=a.out, bundle=a.bundle)
+    if a.command == 'context':
+        context = verify_skill_context(read_json(a.context), a.host, read_json(a.lock) if a.lock else None)
+        return {'status': 'VERIFIED', 'build_id': context['build_id'], 'model_host': context['model_host'],
+                'language': context['language'], 'register': context['register'],
+                'lock_verified': a.lock is not None}
     if a.command == 'explain':
         result = catalog.explain(read_json(a.context))
         write_json(a.out, result)
@@ -139,6 +179,19 @@ def run(a):
         if a.action == 'serve':
             duel.serve(a.session, port=a.port)
             return {'status':'STOPPED'}
+        if a.action == 'quick-plan':
+            plan = quickduel.make_plan(read_json(a.sources), seed=a.seed, budget=a.budget)
+            publish_bundle(a.out, {'plan.private.json':canonical(plan)})
+            return {'status':'PLAN_FROZEN', 'duels':len(plan['rows']), 'budget':plan['budget'], 'plan_digest':plan['digest']}
+        if a.action == 'quick-prepare':
+            blind, _ = quickduel.make_session(read_json(a.plan), read_json(a.cases), a.out, synthetic=a.synthetic)
+            return {'status':'SYNTHETIC' if a.synthetic else 'READY_FOR_OWNER', 'duels':len(blind['cases']), 'session_id':blind['session_id']}
+        if a.action == 'report':
+            result = review.partial_report(read_json(a.session), read_json(a.answers), read_json(a.key),
+                stopped_by_owner=a.stop, source_map=read_json(a.source_map) if a.source_map else None,
+                input_sha256=sha(Path(a.answers).read_bytes()))
+            publish_bundle(a.out, {'report.json':canonical(result)})
+            return {'status':result['status'], 'stop_reason':result['stop_reason'], 'committed':result['committed']['duels'], 'planned':result['planned']['duels']}
         engine = pairwise if a.action.startswith('pair-') else duel
         if a.action in ('prepare', 'pair-prepare'):
             cases = read_json(a.cases)
@@ -231,7 +284,7 @@ def run(a):
                                 catalog.resolve(data, ref, model_host=hosts[0])
             return {"status": "VALID", "packs": [p["id"] for p in chain],
                     'corpus_validation': 'BOUND_REFERENCES_CHECKED' if corpus_bindings else 'NOT_REQUESTED'}
-        host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "patchpitch-legacy": "ollama", "patchpitch": "ollama"}[a.target]
+        host = a.host or {"chatgpt": "chatgpt", "codex": "codex", "claude": "claude", "patchpitch-legacy": "ollama", "patchpitch": "ollama"}[a.target]
         try:
             context, lock = compile_context(a.pack, bindings=bindings, register=a.register, language=a.language,
                                             target=a.target, model_host=host, tags=a.tag, max_chars=a.max_chars,
@@ -282,6 +335,8 @@ def main(argv=None):
     try:
         result = run(parser().parse_args(argv))
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        if result.get('schema_version') == 'quillgrain.length/v1' and result['status'] == 'FAIL':
+            return 1
         return 0
     except QGError as exc:
         print(exc.code, file=sys.stderr)

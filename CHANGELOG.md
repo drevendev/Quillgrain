@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — source-once Ink Duel and explicit length budgets
+
+Add a separately versioned quick plan/session/client with a fixed default budget,
+normalized-source deduplication and balanced sides. Five ordinal preference choices,
+two optional card comments, draft persistence, protected commit/import and explicit
+stop/review replace the longer rubric only for new-format campaigns. Read-only
+partial reports support quick-v1 and historical numeric-v1/pair-v2/multi-v3 without
+inferring an overall vote from old criteria or publishing a win-rate league.
+Add the portable `qg-words/v1` counter with per-part and aggregate checks; skills
+ship the identical helper. None of these commands generate model responses.
+
+## Unreleased — Claude and Codex writing skills
+
+The current assistant writes with Quillgrain voice context without a local model
+or separate API. Adds the Claude export target, explicit project/portable skill
+installation, host/lock verification, shared writing instructions, and Codex UI
+metadata. Bound skills carry their context and lock so they survive relocation.
+Generic installs contain no voice data; existing host permissions are preserved.
+
 ## 0.1.0rc4 — versioned private corpus resources
 
 Adds private corpus/source/fragment schemas, explicit storage approval, immutable

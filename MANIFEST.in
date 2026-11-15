@@ -1,6 +1,6 @@
 include LICENSE README.md AGENTS.md SECURITY.md CONTRIBUTING.md CHANGELOG.md
 include requirements-dev.lock.txt
-recursive-include src *.py *.json *.md *.html *.js *.css
+recursive-include src *.py *.json *.md *.yaml *.html *.js *.css
 recursive-include examples *.json *.md
 recursive-include tests *.py *.cjs
 recursive-include docs *.md
