@@ -5,13 +5,14 @@ import os
 import platform
 import sys
 from pathlib import Path
-from . import __version__, corpus, evaluation, feedback, duel, pairwise, catalog, lengths, quickduel, review
+from . import __version__, corpus, evaluation, feedback, duel, pairwise, catalog, lengths, quickduel, review, editorial
 from .adapters.scriptorium import analyze, import_observation
 from .checks import check
 from .compose import compile_context, load_chain
 from .export import export
 from .skills import SKILL_ROOTS, install, verify_skill_context
-from .io import QGError, read_json, read_jsonl, sha, write_json, publish_bundle, canonical
+from .io import QGError, read_json, read_jsonl, sha, write_json, write_bytes, publish_bundle, canonical, safe_destination
+from .portable import metadata
 
 
 def parser():
@@ -27,6 +28,7 @@ def parser():
     destination.add_argument('--project', type=Path, help='Install into this project for the selected agent')
     destination.add_argument('--out', type=Path, help='Create a standalone skill folder at this exact path')
     si.add_argument('--bundle', type=Path, help='Optionally bind an exported context and lock to the skill')
+    si.add_argument('--skill-name', help='Name shared by the skill folder, frontmatter and invocation')
     cv = commands.add_parser('context').add_subparsers(dest='action', required=True).add_parser('verify')
     cv.add_argument('--context', required=True)
     cv.add_argument('--host', required=True, help='Actual assistant destination, e.g. codex or claude')
@@ -93,12 +95,15 @@ def parser():
             cmd.add_argument("--max-chars", type=int, default=8000)
             cmd.add_argument("--public", action="store_true")
             cmd.add_argument("--lock")
+            cmd.add_argument('--skill-name', help='Explicit name of the exported agent skill')
             cmd.add_argument("--out", required=True)
     ck = commands.add_parser("check")
     ck.add_argument("--draft", required=True)
     ck.add_argument("--context", required=True)
     ck.add_argument("--scopes")
     ck.add_argument("--out", required=True)
+    ck.add_argument('--review-json', help='Opt-in local human-review list at a new file')
+    ck.add_argument('--review-md', help='Markdown rendering of the same human-review list at a new file')
     fb = commands.add_parser("feedback").add_subparsers(dest="action", required=True).add_parser("record")
     for name in ("before", "after", "context", "note", "out"):
         fb.add_argument("--" + name, required=True)
@@ -137,6 +142,7 @@ def parser():
         qr.add_argument('--'+name, required=True)
     qr.add_argument('--source-map', help='Optional frozen mapping for historical files without source IDs')
     qr.add_argument('--stop', action='store_true', help='Owner explicitly ends voting and requests a partial review')
+    qr.add_argument('--comments-out', help='Explicit separate private directory for literal card comments and review states')
     for name in ('prepare', 'pair-prepare'):
         dp = du.add_parser(name)
         dp.add_argument('--cases', required=True)
@@ -165,12 +171,10 @@ def run(a):
         except ValueError:
             raise QGError('INVALID_WORD_RANGE')
     if a.command == 'skill':
-        return install(a.agent, project=a.project, output=a.out, bundle=a.bundle)
+        return install(a.agent, project=a.project, output=a.out, bundle=a.bundle, name=a.skill_name)
     if a.command == 'context':
         context = verify_skill_context(read_json(a.context), a.host, read_json(a.lock) if a.lock else None)
-        return {'status': 'VERIFIED', 'build_id': context['build_id'], 'model_host': context['model_host'],
-                'language': context['language'], 'register': context['register'],
-                'lock_verified': a.lock is not None}
+        return {**metadata(context, lock_verified=a.lock is not None), 'full_json_schema': 'PASSED'}
     if a.command == 'explain':
         result = catalog.explain(read_json(a.context))
         write_json(a.out, result)
@@ -187,9 +191,20 @@ def run(a):
             blind, _ = quickduel.make_session(read_json(a.plan), read_json(a.cases), a.out, synthetic=a.synthetic)
             return {'status':'SYNTHETIC' if a.synthetic else 'READY_FOR_OWNER', 'duels':len(blind['cases']), 'session_id':blind['session_id']}
         if a.action == 'report':
-            result = review.partial_report(read_json(a.session), read_json(a.answers), read_json(a.key),
+            blind, answers, key = read_json(a.session), read_json(a.answers), read_json(a.key)
+            result = review.partial_report(blind, answers, key,
                 stopped_by_owner=a.stop, source_map=read_json(a.source_map) if a.source_map else None,
                 input_sha256=sha(Path(a.answers).read_bytes()))
+            if a.comments_out:
+                report_path, comment_path = Path(a.out).resolve(), Path(a.comments_out).resolve()
+                if report_path.is_relative_to(comment_path) or comment_path.is_relative_to(report_path):
+                    raise QGError('DUEL_PRIVATE_OUTPUT_COLLISION', 3)
+                for p in (a.out, a.comments_out):
+                    safe_destination(p)
+                    if os.path.lexists(p):
+                        raise QGError('OUTPUT_ALREADY_EXISTS', 3)
+                notes = review.comment_review(blind, answers, key, stopped_by_owner=a.stop)
+                publish_bundle(a.comments_out, {'comment-review.private.json':canonical(notes)})
             publish_bundle(a.out, {'report.json':canonical(result)})
             return {'status':result['status'], 'stop_reason':result['stop_reason'], 'committed':result['committed']['duels'], 'planned':result['planned']['duels']}
         engine = pairwise if a.action.startswith('pair-') else duel
@@ -293,22 +308,43 @@ def run(a):
         except QGError as exc:
             # Keep potentially private rule IDs in the explicitly chosen local output,
             # while terminal diagnostics remain short and path/text-free.
-            try:
-                publish_bundle(a.out, {'build-error.json':canonical({
-                    'status':'CONFLICT' if 'CONFLICT' in exc.code else 'ERROR',
-                    'code':exc.code, 'details':{} if a.public else exc.details})})
-            except QGError:
-                pass  # Never contaminate an occupied export or follow its links on failure.
+            # Agent exports must not leave a final installation-looking directory.
+            if a.target not in SKILL_ROOTS:
+                try:
+                    publish_bundle(a.out, {'build-error.json':canonical({
+                        'status':'CONFLICT' if 'CONFLICT' in exc.code else 'ERROR',
+                        'code':exc.code, 'details':{} if a.public else exc.details})})
+                except QGError:
+                    pass  # Never contaminate an occupied export or follow its links on failure.
             raise
-        export(context, lock, a.out)
+        export(context, lock, a.out, name=a.skill_name)
         return {"status": "BUILT", "build_id": context["build_id"], "visibility": context["visibility"],
                 "codepoints": context["budget"]["used_codepoints"], "warnings": context["warnings"]}
     if a.command == "check":
-        result = check(text(a.draft), read_json(a.context), read_json(a.scopes) if a.scopes else [])
+        draft, context = text(a.draft), read_json(a.context)
+        scopes = read_json(a.scopes) if a.scopes else []
+        paths = [Path(p).absolute() for p in (a.out, a.review_json, a.review_md) if p]
+        inputs = {Path(p).resolve() for p in (a.draft, a.context, a.scopes) if p}
+        if len(paths) != len(set(paths)) or any(p.resolve() in inputs for p in paths):
+            raise QGError('CHECK_OUTPUT_COLLISION', 3)
+        for p in paths:
+            safe_destination(p)
+        for p in (a.review_json, a.review_md):
+            if p and os.path.lexists(p):
+                raise QGError('OUTPUT_ALREADY_EXISTS', 3)
+        result = check(draft, context, scopes)
+        if a.review_json or a.review_md:
+            review_items = editorial.review_list(draft, context, scopes)
+            if a.review_json:
+                write_json(a.review_json, review_items)
+            if a.review_md:
+                write_bytes(a.review_md, editorial.markdown(review_items))
         write_json(a.out, result)
         if result["errors"] or any(f["severity"] == "error" for f in result["findings"]):
             raise QGError("CHECK_FAILED", 3)
-        return {"findings": len(result["findings"]), "human_review_checks": len(result["skipped_checks"])}
+        covered = editorial.coverage(draft, context, scopes, report=result)
+        return {"findings": len(result["findings"]), "human_review_checks": len(covered['human_review_rule_ids']),
+                'coverage': covered}
     if a.command == "analyze":
         prepared = text(a.input)
         result = import_observation(a.import_path, sha(prepared.encode("utf-8"))) if a.import_path else analyze(

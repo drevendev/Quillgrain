@@ -30,12 +30,22 @@ permissions or an invented profile. Keep private exports outside public checkout
 ```text
 qg context verify --context CONTEXT_JSON --host codex --lock LOCK_JSON
 qg check --draft DRAFT_FILE --context CONTEXT_JSON --out NEW_CHECK_JSON
+qg check --draft DRAFT_FILE --context CONTEXT_JSON --out NEW_CHECK_JSON --review-json NEW_REVIEW_JSON --review-md NEW_REVIEW_MD
 ```
 
 Use `--host claude` in Claude. For named dialogue, pass the consumer's actual
 character spans with `qg check --scopes SCOPES_JSON`; do not invent offsets.
 The checker leaves the draft unchanged. Read its findings, errors, and skipped
 checks; exit 3 means a check failed. `human_review` checks need editorial judgment.
+The optional review outputs contain only applied human-review rules, their scope,
+context/draft digests and NOT_REVIEWED states. They are explicit local exports,
+not pass/fail results. Read the whole draft first. Keep reviewer notes separate:
+rule ID, draft span, category (fact/brief, language norm, register/audience/speaker,
+or taste), reason, what is lost, and a current source for a claim about a current
+norm. An unanswered item stays unknown; a permissible alternative is not an error.
+The ordinary check-report/v1 remains unchanged. The CLI separately reports
+executed, human-review and unavailable-character rules. Do not run an empty
+mechanical loop for a human-review-only pack unless explicitly auditing it.
 Without a lock, context verification checks the context digest and host but cannot
 verify the separate lock. Checks measure structural constraints, not factual truth
 or voice quality.

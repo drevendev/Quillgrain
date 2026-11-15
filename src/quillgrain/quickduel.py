@@ -59,6 +59,9 @@ def _balance_sides(rows, rng):
 
 def make_plan(manifest, *, seed, budget=30):
     """Input has no outputs. Category-stratified, greedily balanced incomplete design."""
+    if manifest.get('schema_version') == 'duel.quick-sources/v2':
+        from .quickv2 import make_plan as v2_plan
+        return v2_plan(manifest, seed=seed, budget=budget)
     require(manifest['schema_version'] == 'duel.quick-sources/v1')
     require(type(budget) is int and 1 <= budget <= 1000 and type(seed) is int, 'DUEL_BUDGET_INVALID')
     conditions, sources = manifest['conditions'], manifest['sources']
@@ -112,6 +115,9 @@ def make_plan(manifest, *, seed, budget=30):
 
 
 def validate_plan(plan):
+    if plan.get('schema_version') == 'duel.quick-plan/v2':
+        from .quickv2 import validate_plan as v2_plan
+        return v2_plan(plan)
     verify_frozen(plan)
     require(plan['schema_version'] == 'duel.quick-plan/v1')
     _conditions(plan['conditions'])
@@ -125,6 +131,9 @@ def validate_plan(plan):
 
 
 def make_session(plan, outputs, output, *, synthetic=False):
+    if plan.get('schema_version') == 'duel.quick-plan/v2':
+        from .quickv2 import make_session as v2_session
+        return v2_session(plan, outputs, output, synthetic=synthetic)
     validate_plan(plan)
     require(isinstance(outputs, list) and len(outputs) == len(plan['rows']), 'DUEL_OUTPUT_COUNT')
     require(len({c['source_id'] for c in outputs}) == len(outputs), 'DUEL_SOURCE_REPEATED')
@@ -176,6 +185,9 @@ def browser_html(blind, *, standalone=True):
 
 
 def validate_blind(blind):
+    if blind.get('schema_version') == 'duel.quick-blind/v2':
+        from .quickv2 import validate_blind as v2_blind
+        return v2_blind(blind)
     verify_frozen(blind)
     require(blind['schema_version'] == 'duel.quick-blind/v1' and 1 <= len(blind['cases']) <= 1000)
     ids = []
@@ -187,6 +199,9 @@ def validate_blind(blind):
 
 
 def validate_key(blind, key):
+    if blind.get('schema_version') == 'duel.quick-blind/v2':
+        from .quickv2 import validate_key as v2_key
+        return v2_key(blind, key)
     validate_blind(blind); verify_frozen(key); validate_plan(key['plan'])
     require(key['schema_version'] == 'duel.quick-key/v1')
     require(key['session_id'] == blind['session_id'] and key['bundle_digest'] == blind['digest'], 'DUEL_WRONG_KEY')

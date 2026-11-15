@@ -44,7 +44,7 @@ def _multi(blind, answers, key):
 
 def partial_report(blind, answers, key, *, stopped_by_owner=False, source_map=None, input_sha256=None):
     version = blind['schema_version']
-    quick = version == 'duel.quick-blind/v1'
+    quick = version in ('duel.quick-blind/v1', 'duel.quick-blind/v2')
     numeric = version == 'duel.blind-session/v1'
     legacy_numeric = None
     if quick:
@@ -108,9 +108,23 @@ def partial_report(blind, answers, key, *, stopped_by_owner=False, source_map=No
                 'categories': dict(Counter(k.get('group', 'unspecified') for k in selected)), 'conditions': exposure}
     guesses = {'attempted': 0, 'correct': 0, 'unknown': 0, 'ambiguous_excluded': 0}
     comments = 0
+    comment_rounds, duplicate_comment_pairs = 0, 0
+    slices, origins = {}, Counter()
     for c, k, r in zip(cases[:count], key['cases'], answers['rounds']):
         if numeric:
             continue
+        task = k.get('task_kind', 'UNKNOWN')
+        group = k.get('group', 'UNKNOWN')
+        bucket = slices.setdefault((task, group), {'task_kind':task, 'group':group, 'n':0,
+                                                  'ordinal_votes':{v:0 for v in quickduel.VOTES} if quick else None})
+        bucket['n'] += 1
+        if quick:
+            bucket['ordinal_votes'][r['vote']] += 1
+            notes = [v.strip() for v in r['comments'].values() if v.strip()]
+            comment_rounds += bool(notes)
+            duplicate_comment_pairs += len(notes) == 2 and notes[0] == notes[1]
+        for card in c['cards']:
+            origins[k.get('origins', {}).get(card['id'], {}).get('kind', 'UNKNOWN')] += 1
         left, right = [k['identities'][v['id']]['arm'] for v in c['cards']]
         p = pair_index[tuple(sorted((left, right)))]
         for d in dimensions:
@@ -137,7 +151,8 @@ def partial_report(blind, answers, key, *, stopped_by_owner=False, source_map=No
                 guesses['ambiguous_excluded' if c['identical'] else 'unknown' if g == 'unknown' else 'attempted'] += 1
                 if not c['identical'] and g != 'unknown':
                     guesses['correct'] += g == k['identities'][card['id']]['arm']
-    return {'schema_version': 'duel.partial-report/v1', 'session_id': blind['session_id'],
+    v2 = version == 'duel.quick-blind/v2'
+    return {'schema_version': 'duel.partial-report/v2', 'session_id': blind['session_id'],
             'bundle_digest': blind['digest'], 'answers_digest': digest(answers), 'input_sha256': input_sha256,
             'source_format': answers['schema_version'], 'status': 'COMPLETE' if count == planned else 'PARTIAL',
             'stop_reason': 'STOPPED_BY_OWNER' if count < planned else 'COMPLETED',
@@ -146,10 +161,45 @@ def partial_report(blind, answers, key, *, stopped_by_owner=False, source_map=No
             'legacy_numeric': {f: legacy_numeric[f] for f in ('axes', 'paired', 'owner_style', 'guesses')} if numeric else None,
             'guesses': None if quick or numeric else guesses,
             'comment_fields_filled': comments, 'causes': 'UNKNOWN_WITHOUT_COMMENTS' if comments == 0 else 'OWNER_COMMENTS_REQUIRE_SEPARATE_REVIEW',
+            'comment_rounds':comment_rounds if quick else None,
+            'duplicate_comment_pairs':duplicate_comment_pairs if quick else None,
+            'absolute_satisfaction':'UNKNOWN',
+            'provenance':{'task_kinds':sorted({k.get('task_kind', 'UNKNOWN') for k in key['cases']}),
+                          'original_in_design':blind['study']['original_in_design'] if v2 else None,
+                          'committed_text_origins':dict(origins) if not numeric else {'UNKNOWN':sum(len(c['cards']) for c in cases[:count])},
+                          'source_role':'INPUT_AND_ORIGINAL' if v2 and blind['study']['original_in_design'] else 'INPUT_ONLY' if v2 else 'UNKNOWN'},
+            'slices':[slices[k] for k in sorted(slices)],
+            'feedback_semantics':{'literal_comments':'PRIVATE_ANSWER_FILE', 'phrase_presence':'NOT_REVIEWED',
+                                  'editorial_interpretation':'NOT_REVIEWED', 'causal_explanation':'UNKNOWN',
+                                  'automatic_rule_promotion':False},
             'conditions': key['plan']['conditions'] if quick else [{'id': a, **{f: 'UNKNOWN' for f in quickduel.FACTORS}} for a in arms],
             'limitations': ['Descriptive observations from one owner; small and unequal opponent samples do not establish a ranking.',
                            'No observations means unknown, not a tie or a loss. No win-rate league is computed.',
                            'Model, profile, examples, brief, reasoning and session may be confounded; text effects are not causal evidence.',
                            'Legacy quality axes, resemblance, guesses and numeric scores are separate; no overall vote or intensity is inferred.',
                            'Repeated sources and works are dependent observations. Missing source IDs remain unknown.',
-                           'Digests verify file consistency, not publisher authenticity. Legacy multi-v3 keys have no independent card text hashes.']}
+                           'Digests verify file consistency, not publisher authenticity. Legacy multi-v3 keys have no independent card text hashes.',
+                           'A relative preference does not establish absolute satisfaction, publication readiness, canon accuracy or general superiority.',
+                           'The same comment on two cards is not two independent defects. Phrase presence is separate from interpretation and cause.']}
+
+
+def comment_review(blind, answers, key, *, stopped_by_owner=False):
+    """Explicit private notes, separate from the default text-free aggregate."""
+    partial_report(blind, answers, key, stopped_by_owner=stopped_by_owner)
+    rows = []
+    for case, answer in zip(blind['cases'], answers['rounds']):
+        if 'comments' not in answer:
+            continue
+        groups = {}
+        for index, card in enumerate(case['cards']):
+            literal = answer['comments'][card['id']]
+            if not literal.strip():
+                continue
+            group = groups.setdefault(literal.strip(), len(groups) + 1)
+            rows.append({'case_id':case['id'], 'card_id':card['id'], 'side':'left' if index == 0 else 'right',
+                         'raw_vote':answer['vote'], 'literal_comment':literal, 'within_round_comment_group':group,
+                         'phrase_presence':'NOT_REVIEWED', 'editorial_interpretation':'NOT_REVIEWED',
+                         'cause':'UNKNOWN', 'status':'NOT_REVIEWED'})
+    return {'schema_version':'duel.comment-review/v1', 'session_id':blind['session_id'],
+            'bundle_digest':blind['digest'], 'answers_digest':digest(answers), 'notes':rows,
+            'automatic_rule_promotion':False}

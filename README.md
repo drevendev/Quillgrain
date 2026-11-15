@@ -42,10 +42,15 @@ defaults and RU/EN examples. Other voices are data packs, not engine forks.
 Exports contain `VOICE_CONTEXT.md`, `context.json` and a version/digest lock.
 `--target patchpitch` adds a portable `voice-bundle.json` for explicit local
 application import; see the [consumer contract](docs/consumer-voice.md).
-`--target codex` additionally exports `.agents/skills/quillgrain/`;
-`--target claude` exports `.claude/skills/quillgrain/`. Both include instructions,
+`--target codex` additionally exports `.agents/skills/quillgrain-<voice-slug>/`;
+`--target claude` exports `.claude/skills/quillgrain-<voice-slug>/`. For the synthetic
+pack the name is `quillgrain-synthetic`; `--skill-name NAME` selects another valid
+name. Both include instructions,
 CLI guidance, and pinned context/lock files under `references/`, so the skill folder
-can be moved independently of the rest of the export.
+can be moved independently of the rest of the export. The bundled stdlib
+`scripts/voice_context.py` verifies context/lock, host and permissions with Python
+alone. Generic installs keep the name `quillgrain`. Standalone `--out` remains an
+exact final path whose last component must match the selected skill name.
 `--target patchpitch-legacy` exports a maximum 1,200-codepoint `voice_reference.txt`
 and manifest for manual use in the existing field. Pass `--host` explicitly when
 the actual model surface differs. `pack build` creates files without installing
@@ -58,7 +63,7 @@ See [contracts and composition](docs/voice-pack-format.md),
 Technical checks establish structural properties; human review determines voice
 quality. Optional Scriptorium observations retain their native units and nulls.
 
-Version 0.1.0rc4 supports explicitly bound private corpus repositories and voice v2
+Version 0.1.0rc5 supports explicitly bound private corpus repositories and voice v2
 references, while retaining voice/context v1 compatibility. Approved sources can
 live in a separate PRIVATE data repository with local checks and no CI. Builds pin
 exact revisions/fragments; exports embed selected examples and work offline.
@@ -77,3 +82,18 @@ For explicit word budgets use `qg length --input DRAFT --min-words MIN --max-wor
 Repeat `--input` for parts and optionally `--part-range MIN:MAX` once per part;
 the sum is also checked against the overall range. Exit 1 reports a length miss.
 The same stdlib counter ships in portable skills; it never invokes an editor/model.
+
+For local editorial review, `qg check --review-json NEW_JSON --review-md NEW_MD`
+exports the applied human-review rules with context/draft digests and NOT_REVIEWED
+states. The ordinary check-report/v1 is unchanged; CLI coverage distinguishes
+executed, human-review and unavailable-character checks. See
+[editorial review](docs/editorial-review.md) and [bounded editing](docs/agent-skills.md).
+
+The [fiction protocol](docs/ink-duel-fiction.md) adds explicit task provenance,
+rights receipts, fact packs, word budgets, previous-profile controls and
+reference/development/reserve separation. New scenes have no fabricated ORIGINAL.
+Reports preserve ordinal votes and leave absolute satisfaction unknown.
+[Agent acceptance](docs/agent-evaluation.md) and
+[intervene-or-preserve regression](docs/editorial-regression.md) are separate from
+Ink Duel. See the [rc5 implementation and validation record](docs/release-0.1.0rc5.md)
+for the actual scope of verification, including unavailable live-agent checks.

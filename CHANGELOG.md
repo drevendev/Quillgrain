@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased — source-once Ink Duel and explicit length budgets
+## 0.1.0rc5 — portable skills, editorial review and fiction plans
+
+Unify export/install host checks, give bound voices distinct skill names and
+validate the generated tree before publication. Ship the engine's shared stdlib
+context/lock/host verifier in every skill. Preserve original drafts, bound edits
+to the request and distinguish mechanical coverage from human review. Optional
+editorial JSON/Markdown lists keep check-report/v1 unchanged.
+
+Add quick-v2 fiction/rewrite/continuation provenance, rights receipts, fact packs,
+word budgets, pinned profile controls and reference/development/reserve checks.
+Partial-report/v2 keeps raw ordinal preferences, unknown absolute satisfaction
+and separately requested private comment review. Historical formats remain readable.
+Public fixtures describe agent acceptance and intervene/preserve regression;
+live-agent limitations are recorded separately from deterministic checks.
+
+### Source-once Ink Duel and explicit length budgets
 
 Add a separately versioned quick plan/session/client with a fixed default budget,
 normalized-source deduplication and balanced sides. Five ordinal preference choices,
@@ -11,7 +26,7 @@ inferring an overall vote from old criteria or publishing a win-rate league.
 Add the portable `qg-words/v1` counter with per-part and aggregate checks; skills
 ship the identical helper. None of these commands generate model responses.
 
-## Unreleased — Claude and Codex writing skills
+### Claude and Codex writing skills
 
 The current assistant writes with Quillgrain voice context without a local model
 or separate API. Adds the Claude export target, explicit project/portable skill
@@ -19,7 +34,7 @@ installation, host/lock verification, shared writing instructions, and Codex UI
 metadata. Bound skills carry their context and lock so they survive relocation.
 Generic installs contain no voice data; existing host permissions are preserved.
 
-## Unreleased — local IO repairs
+### Local IO repairs
 
 Apply duplicate-key and nonfinite-value rejection to corpus selection JSONL as
 well as JSON. Remove transaction-owned bundle staging after handled write or

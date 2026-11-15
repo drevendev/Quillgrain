@@ -7,11 +7,12 @@
 <button id="export">Сохранить ответы</button>
 <label class="file">Загрузить ответы<input id="import" type="file" accept="application/json,.json"></label>
 <button id="stop">Остановиться и посмотреть итоги</button>
+<label>Прочитать сохранённый раунд<select id="history"><option value="">Текущая пара или итоги</option></select></label>
 <label class="file" id="key-label" hidden>Открыть ключ для итогов<input id="key" type="file" accept="application/json,.json"></label>
 <button id="report-export" hidden>Сохранить сводку без текстов</button>
 </nav></details></header>
 <p id="status" role="status" aria-live="polite"></p>
-<main><p id="purpose"></p><p id="identical" hidden>Тексты совпадают. Доступна оценка «Равно».</p>
+<main><p id="study"></p><p id="purpose"></p><p id="identical" hidden>Тексты совпадают. Доступна оценка «Равно».</p>
 <section id="cards" aria-label="Два текста"></section>
 <fieldset id="votes"><legend>Какой текст лучше в целом?</legend><div id="vote-buttons"></div>
 <small>Клавиши 1–5 · Выбор сохраняет оценку и открывает следующую пару. Комментарии необязательны.</small></fieldset>

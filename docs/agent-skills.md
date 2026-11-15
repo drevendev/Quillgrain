@@ -51,6 +51,17 @@ qg skill install --agent codex --bundle out/codex-voice --project PATH_TO_WRITIN
 qg skill install --agent claude --bundle out/claude-voice --project PATH_TO_WRITING_PROJECT
 ```
 
+Связанный навык по умолчанию называется `quillgrain-<voice-slug>`; в этих
+синтетических примерах — `quillgrain-synthetic`. Папки находятся соответственно
+в `.agents/skills/quillgrain-synthetic/` и `.claude/skills/quillgrain-synthetic/`.
+Общий `quillgrain` может сосуществовать с ними. `--skill-name NAME` в build
+или install выбирает другое имя и согласованно меняет frontmatter и UI metadata.
+Если ID pack нельзя превратить в корректное имя, задайте имя явно.
+
+Перед публикацией каталога движок проверяет сгенерированное дерево: имя папки,
+обязательные поля, ссылки и ресурсы. Экспорт и установка одинаково проверяют
+фактический host и разрешения; несовместимый skill не появляется как готовый.
+
 Установка проверяет контекст, его host и lock, затем создаёт навык из поставляемых
 инструкций и проверенных данных. Соседние файлы экспорта не устанавливаются.
 `references/context.json`, `references/VOICE_CONTEXT.md` и
@@ -69,27 +80,32 @@ qg skill install --agent claude --bundle out/claude-voice --project PATH_TO_WRIT
 Для самостоятельной папки вместо установки в проект используйте `--out`:
 
 ```text
-qg skill install --agent claude --bundle out/claude-voice --out out/quillgrain
+qg skill install --agent claude --bundle out/claude-voice --out out/quillgrain-synthetic
 ```
 
-Получится стандартная папка `quillgrain/` с `SKILL.md` и ресурсами. Её можно
+`--out` обозначает точный конечный путь. Его последнее имя должно совпасть
+с выбранным именем skill; иначе установка отказывается до записи.
+Получится стандартная папка `quillgrain-synthetic/` с `SKILL.md` и ресурсами. Её можно
 перенести в поддерживаемое локальное расположение навыков. Для интерфейса,
 принимающего ZIP навыка, упакуйте папку так, чтобы в архиве был
-`quillgrain/SKILL.md`. Например, в PowerShell:
+`quillgrain-synthetic/SKILL.md`. Например, в PowerShell:
 
 ```powershell
-Compress-Archive -Path out/quillgrain -DestinationPath out/quillgrain.zip
+Compress-Archive -Path out/quillgrain-synthetic -DestinationPath out/quillgrain-synthetic.zip
 ```
 
 Установка в `.claude/skills` относится к **Claude Code**. Она не загружает навык
 в аккаунт claude.ai и не устанавливает его в обычный браузерный чат. Доступность
 загрузки и исполнения ресурсов зависит от выбранного интерфейса. Если там нет
-движка `qg`, ассистент может писать по встроенному контексту, но обязан обозначить,
-что проверка digest и программные проверки не выполнены.
+движка `qg`, но есть Python, встроенный `scripts/voice_context.py` проверяет
+целостность и host без установки зависимостей. При недоступном исполнении
+проверка остаётся `NOT_RUN`. Веб-интерфейсы здесь отдельно не проверялись.
 
 ## Проверка результата
 
 ```text
+python ABSOLUTE_SKILL_DIRECTORY/scripts/voice_context.py --host codex
+python ABSOLUTE_SKILL_DIRECTORY/scripts/voice_context.py --host codex --show
 qg context verify --context CONTEXT_JSON --host codex --lock LOCK_JSON
 qg check --draft DRAFT_FILE --context CONTEXT_JSON --out NEW_CHECK_JSON
 ```
@@ -98,6 +114,42 @@ qg check --draft DRAFT_FILE --context CONTEXT_JSON --out NEW_CHECK_JSON
 пишет текст сам и проверяет полученный файл. Факты, канон и личный опыт берутся
 из задания, а примеры задают только письмо. Техническая проверка не доказывает
 качество или сходство с автором; окончательное решение остаётся за человеком.
+
+Первый вызов помощника выводит компактные metadata и методы правил, второй —
+только проверенный payload. Явно выбранные файлы передавайте через `--context`
+и `--lock`; язык и регистр можно проверить параметрами `--language` и `--register`.
+Полная JSON Schema проверяется движком; переносимый помощник прямо сообщает
+границу своей проверки.
+
+## Правка и проверка покрытия
+
+Навык различает новый черновик, целевую правку и свободное переписывание.
+При правке исходник сохраняется отдельно; изменения ограничиваются запросом,
+сохраняют смысл, говорящего, исход сцены и бюджет. Нет обязательной квоты
+сокращения или числа редакторских проходов. Запрос черновика не включает
+автоматическую полировку.
+
+`rule_methods` помогает выбрать полезную проверку. Полностью `human_review`
+контекст читается редакторски без обязательного пустого `qg check`. В смешанном
+контексте исполнимые правила проверяются отдельно; недоступная разметка персонажей
+не становится PASS. Явный бюджет слов проверяется `scripts/lengths.py` независимо
+от типа голосовых правил. Подробности — в [редакторском списке](editorial-review.md).
+
+## Совпадения имён
+
+Установщик сообщает известные одноимённые skills в целевом проекте и стандартных
+доступных пользовательских каталогах. Диагностика перечисляет проверенные места;
+она не сканирует весь диск и не меняет чужие skills. Старые установки остаются
+на месте; новая установка выполняется явно в новую папку.
+
+По документации [Codex](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
+одноимённые skills не объединяются и могут одновременно присутствовать в выборе.
+[Claude Code](https://code.claude.com/docs/en/skills#resolve-skills-that-share-a-name)
+применяет собственные правила приоритета: enterprise, personal, project.
+Для установленной версии клиента это проверяется отдельно; совпадение имени
+не гарантирует одинакового голоса. Переносимые связанные имена и metadata
+позволяют явно выбрать источник. Текущие результаты — в
+[агентской приёмке](agent-evaluation.md).
 
 Форматы и пути сверены с официальной документацией
 [Codex](https://learn.chatgpt.com/docs/build-skills) и

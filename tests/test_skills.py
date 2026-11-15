@@ -7,7 +7,7 @@ from quillgrain.compose import compile_context
 from quillgrain.contracts import verify_context
 from quillgrain.export import export
 from quillgrain.io import QGError, digest, read_json, write_json
-from quillgrain.skills import SKILL_ROOTS, install, verify_skill_context
+from quillgrain.skills import SKILL_ROOTS, install, verify_skill_context, skill_path
 
 
 @pytest.mark.parametrize('agent', ['codex', 'claude'])
@@ -18,9 +18,9 @@ def test_cli_builds_a_relocatable_bound_skill(agent, pack, save, tmp_path):
                  '--target', agent, '--out', str(output)]) == 0
     context = read_json(output / 'context.json')
     assert context['model_host'] == agent
-    skill = output / SKILL_ROOTS[agent]
+    skill = output / skill_path(agent, 'quillgrain-synthetic')
     # Move only the skill; neither the export nor its original pack remains here.
-    relocated = tmp_path / 'another-project' / SKILL_ROOTS[agent]
+    relocated = tmp_path / 'another-project' / skill_path(agent, 'quillgrain-synthetic')
     shutil.copytree(skill, relocated)
     output.rename(tmp_path / 'old-export')
     source.rename(tmp_path / 'old-pack')
@@ -45,7 +45,7 @@ def test_generic_install_is_data_free_and_never_overwrites(agent, tmp_path):
     assert main(args) == 0
     installed = project / SKILL_ROOTS[agent]
     assert {p.relative_to(installed).as_posix() for p in installed.rglob('*') if p.is_file()} == {
-        'SKILL.md', 'references/cli.md', 'agents/openai.yaml', 'scripts/lengths.py'}
+        'SKILL.md', 'references/cli.md', 'agents/openai.yaml', 'scripts/lengths.py', 'scripts/voice_context.py'}
     original = (installed / 'SKILL.md').read_bytes()
     assert main(args) == 3
     assert (installed / 'SKILL.md').read_bytes() == original
@@ -59,7 +59,7 @@ def test_bound_install_regenerates_markdown_and_ignores_bundle_code(pack, save, 
     (bundle / 'run.py').write_text('raise RuntimeError("must not run")', encoding='utf-8')
     destination = tmp_path / 'portable-skill'
     assert main(['skill', 'install', '--agent', 'codex', '--bundle', str(bundle),
-                 '--out', str(destination)]) == 0
+                 '--out', str(destination), '--skill-name', 'portable-skill']) == 0
     assert (destination / 'references/VOICE_CONTEXT.md').read_bytes() != (bundle / 'VOICE_CONTEXT.md').read_bytes()
     assert context['prompt_payload'] in (destination / 'references/VOICE_CONTEXT.md').read_text(encoding='utf-8')
     assert not (destination / 'run.py').exists()
@@ -101,7 +101,7 @@ def test_claude_target_does_not_expand_pack_permissions(pack, save, tmp_path):
     assert main(['pack', 'build', '--pack', str(path), '--register', 'essay',
                  '--target', 'claude', '--out', str(tmp_path / 'denied')]) == 3
     assert (path / 'voice.json').read_bytes() == original
-    assert not (tmp_path / 'denied' / SKILL_ROOTS['claude']).exists()
+    assert not (tmp_path / 'denied').exists()
 
 
 def test_install_rejects_linked_destination(tmp_path):

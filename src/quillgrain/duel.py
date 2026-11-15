@@ -270,7 +270,7 @@ def serve(blind_path, *, port=8767):
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from importlib.resources import files
     blind = verify_frozen(read_json(blind_path))
-    quick = blind.get('schema_version') == 'duel.quick-blind/v1'
+    quick = blind.get('schema_version') in ('duel.quick-blind/v1', 'duel.quick-blind/v2')
     if quick:
         from .quickduel import validate_blind, browser_html
         validate_blind(blind)

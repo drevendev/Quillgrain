@@ -2,6 +2,13 @@ import copy
 from pathlib import Path
 import pytest
 from quillgrain.io import read_json, write_json
+from quillgrain import skills
+
+
+@pytest.fixture(autouse=True)
+def isolate_skill_locations(monkeypatch, tmp_path):
+    # Public tests must never inspect the operator's installed personal profiles.
+    monkeypatch.setattr(skills, 'standard_user_roots', lambda agent: [tmp_path / 'synthetic-user-skills'])
 
 
 @pytest.fixture
