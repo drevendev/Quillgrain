@@ -373,6 +373,8 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         if result.get('schema_version') == 'quillgrain.length/v1' and result['status'] == 'FAIL':
             return 1
+        if result.get('schema_version') == 'quillgrain.length-plan/v1' and result['status'] == 'CONFLICT':
+            return 1
         return 0
     except QGError as exc:
         print(exc.code, file=sys.stderr)

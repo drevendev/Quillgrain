@@ -19,10 +19,10 @@
 | #30–31 | Quick-v2 контракты и проверяемый план самостоятельных сцен | Прямое происхождение, отсутствие фиктивного ORIGINAL, word budget, квоты и разделение материала |
 
 Текущий автоматический набор использует оригинальные синтетические fixtures.
-Локальная проверка на Python 3.14: 191 passed, 2 Windows symlink skips;
+Локальная проверка на Python 3.14: 201 passed, 2 Windows symlink skips;
 отдельный Node-набор: 8 passed. DOM integration tests выполнены для quick-v1
 и quick-v2. Wheel/sdist собраны, установленный wheel прошёл export/verify/check
-smoke; аудит исходников и обоих архивов проверил 324 члена, включая поиск
+smoke; аудит исходников и обоих архивов проверил 336 членов, включая поиск
 приватных контрольных строк.
 Сборка и публичный аудит выполняются по фактическим wheel/sdist; счётчики
 и результаты относятся к проверенному head и приводятся в описании ПР.
@@ -40,3 +40,14 @@ jsdom-зависимостями из `tests/browser/package-lock.json`; обы�
 персональные skills и не подтверждает качество конкретного авторского голоса.
 Вопросы литературной пользы проверяются после фиксации кандидата на отдельно
 разрешённом новом материале.
+
+## Integration of the profile recipe builder
+
+PR #41 is incorporated before this release. Multi-register profile bundles now
+load the same portable context/host/lock invariants as ordinary skills; their
+wrapper adds only mode, file-manifest and rules-only checks. The bundled runtime
+and engine use identical source bytes, including under isolated Python (-I -S).
+The counter also plans feasible next-part intervals. Both the standalone helper
+and qg length return failure for an infeasible interval without generating prose.
+The combined Python suite passes 201 tests with two Windows symlink skips; Node
+passes eight tests and quick-v1/v2 integration passes with pinned jsdom 26.1.0.

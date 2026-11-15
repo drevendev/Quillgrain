@@ -34,6 +34,14 @@ installation, host/lock verification, shared writing instructions, and Codex UI
 metadata. Bound skills carry their context and lock so they survive relocation.
 Generic installs contain no voice data; existing host permissions are preserved.
 
+### Reproducible multi-register profiles
+
+Add pinned rules-only Codex/Claude recipes, explicit host permission snapshots,
+normalized archives and read-only installed comparisons. Private recipes and
+profile wrappers use the same stdlib context invariants as generic skills.
+Plan a feasible next-part word interval from the real prefix, future ranges and
+total budget without generating or editing prose.
+
 ### Local IO repairs
 
 Apply duplicate-key and nonfinite-value rejection to corpus selection JSONL as
