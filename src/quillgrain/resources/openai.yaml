@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quillgrain"
+  short_description: "Write and edit with a portable author voice"
+  default_prompt: "Use $quillgrain to write or edit this text with my selected voice pack and task brief."

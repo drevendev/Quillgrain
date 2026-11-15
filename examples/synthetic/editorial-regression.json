@@ -1,0 +1,120 @@
+{
+  "schema_version": "quillgrain.editorial-regression/v1",
+  "status": "NOT_RUN",
+  "families": [
+    {
+      "id": "term",
+      "rule_focus": "Use a necessary term without hiding a simple action in an empty service construction.",
+      "cases": [
+        {
+          "id": "term-preserve",
+          "action": "preserve",
+          "brief": "A repair note for optics technicians; the focal length is the required measurement.",
+          "text": "Measure the focal length before adjusting the fictional instrument.",
+          "properties": [
+            "Keep the technical measurement precise"
+          ],
+          "alternatives": [
+            "Other precise descriptions of the same measurement"
+          ]
+        },
+        {
+          "id": "service-edit",
+          "action": "intervene",
+          "brief": "A direct instruction to switch off a fictional lamp.",
+          "text": "Carry out the implementation of the deactivation of the lamp.",
+          "properties": [
+            "State the switching-off action directly without losing its object"
+          ],
+          "alternatives": [
+            "Switch off the lamp.",
+            "Turn the lamp off."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "abbreviation",
+      "rule_focus": "Distinguish an audience-known abbreviation from an unexplained new acronym.",
+      "cases": [
+        {
+          "id": "known-preserve",
+          "action": "preserve",
+          "brief": "A lab note for researchers who already use the abbreviation LED.",
+          "text": "Check the LED before replacing the battery.",
+          "properties": [
+            "Keep the established component identity"
+          ],
+          "alternatives": [
+            "An equally precise expanded name if the brief asks for it"
+          ]
+        },
+        {
+          "id": "opaque-edit",
+          "action": "intervene",
+          "brief": "A public visitor note; NGP is a new fictional name meaning night gate permit.",
+          "text": "Bring your NGP to the night entrance.",
+          "properties": [
+            "Explain the unfamiliar permit name"
+          ],
+          "alternatives": [
+            "Use the full name",
+            "Define the abbreviation before use"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idiom",
+      "rule_focus": "Distinguish ordinary idiom, accidental corruption and intentional wordplay.",
+      "cases": [
+        {
+          "id": "idiom-preserve",
+          "action": "preserve",
+          "brief": "Ordinary English narration with the familiar expression about an obvious hidden problem.",
+          "text": "There was an elephant in the room, and nobody mentioned it.",
+          "properties": [
+            "Preserve the meaning of the shared unspoken problem"
+          ],
+          "alternatives": [
+            "Another fitting ordinary expression"
+          ]
+        },
+        {
+          "id": "idiom-repair",
+          "action": "intervene",
+          "brief": "An ordinary proverb is intended; no wordplay is requested.",
+          "text": "Do not count your ladders before they hatch.",
+          "properties": [
+            "Repair the accidental mismatch while preserving the warning against premature certainty"
+          ],
+          "alternatives": [
+            "A correct ordinary idiom",
+            "A direct paraphrase"
+          ]
+        },
+        {
+          "id": "wordplay-preserve",
+          "action": "preserve",
+          "brief": "In this fictional comedy, a carpenter deliberately twists the proverb with ladders; the joke is intentional.",
+          "text": "Do not count your ladders before they hatch.",
+          "properties": [
+            "Retain the deliberate carpenter joke"
+          ],
+          "alternatives": [
+            "A different explicitly authorized joke",
+            "Keep the original wording"
+          ]
+        }
+      ]
+    }
+  ],
+  "outcomes": [
+    "meaning_violation",
+    "unnecessary_intervention",
+    "acceptable_variation",
+    "undetermined"
+  ],
+  "independence_unit": "family",
+  "controls": "Pin the previous and candidate contexts before running; retain every attempt; use new reserve material after development."
+}

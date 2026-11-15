@@ -4,42 +4,39 @@ import hashlib
 import json
 import sys
 from pathlib import Path, PurePosixPath
+import importlib.util
 
 
-def canonical(value):
-    return (json.dumps(value, ensure_ascii=False, sort_keys=True,
-                       separators=(',', ':'), allow_nan=False) + '\n').encode('utf-8')
+if __package__:
+    from . import portable as runtime
+else:
+    # -I -S deliberately excludes the script directory from sys.path. Load only
+    # this bundled sibling, never an ambient module or an engine checkout.
+    spec = importlib.util.spec_from_file_location('qg_bundled_runtime',
+        Path(__file__).resolve().with_name('portable_runtime.py'))
+    runtime = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runtime)
 
-
-def digest(value):
-    return hashlib.sha256(canonical(value)).hexdigest()
+canonical, digest = runtime.canonical, runtime.digest
 
 
 def read_json(path):
-    def pairs(items):
-        result = {}
-        for key, value in items:
-            if key in result:
-                raise ValueError('DUPLICATE_JSON_KEY')
-            result[key] = value
-        return result
-    return json.loads(Path(path).read_text(encoding='utf-8-sig'), object_pairs_hook=pairs,
-                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError('NONFINITE_JSON')))
+    try:
+        return runtime.strict_json(Path(path).read_text(encoding='utf-8-sig'))
+    except runtime.QGError as exc:
+        raise ValueError(exc.code) from exc
 
 
 def verify(context, host, lock):
-    if digest({k: v for k, v in context.items() if k != 'build_id'}) != context['build_id']:
-        raise ValueError('CONTEXT_DIGEST_MISMATCH')
-    if digest(lock) != context['lock_digest']:
-        raise ValueError('LOCK_DIGEST_MISMATCH')
+    try:
+        runtime.verify_host(context, host, lock)
+    except runtime.QGError as exc:
+        raise ValueError(exc.code) from exc
     permissions = context['permissions']
     if context['model_host'] != host or permissions['approved_model_hosts'] != [host]:
         raise ValueError('CONTEXT_HOST_MISMATCH')
     if not permissions['retrieval'] or permissions['public_redistribution']:
         raise ValueError('CONTEXT_PERMISSION_MISMATCH')
-    used = len(context['prompt_payload'])
-    if used != context['budget']['used_codepoints'] or not 0 <= used <= context['budget']['max_codepoints']:
-        raise ValueError('CONTEXT_BUDGET_MISMATCH')
     if context.get('example_mode') != 'none' or context['examples_selected'] or context.get('corpus_materials'):
         raise ValueError('RULES_ONLY_REQUIRED')
     return context

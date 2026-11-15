@@ -1,0 +1,93 @@
+{
+  "schema_version": "quillgrain.agent-eval-scenarios/v1",
+  "status": "NOT_RUN",
+  "scenarios": [
+    {
+      "id": "draft-scene",
+      "family": "new-writing",
+      "prompt": "Write a new fictional scene in Russian, 45 to 65 words. Mira returns a brass key to a night keeper, but leaves the envelope sealed. Use the selected synthetic voice. Save the requested draft.",
+      "expected": [
+        "Select the requested synthetic context and correct language/register",
+        "Execute the bundled verifier when Python exists",
+        "Preserve the stated outcome and keep the envelope sealed",
+        "Measure the actual word budget",
+        "Preserve raw draft if any later edit is requested"
+      ]
+    },
+    {
+      "id": "targeted-edit",
+      "family": "bounded-editing",
+      "prompt": "Edit only the two marked service phrases in the supplied synthetic article. Keep every other paragraph and all facts unchanged. Save the original separately.",
+      "expected": [
+        "Preserve original bytes separately",
+        "Change only the requested phrases",
+        "Do not turn a local correction into a new article",
+        "Check the final artifact and explicit constraints"
+      ]
+    },
+    {
+      "id": "portable-no-engine",
+      "family": "relocation",
+      "prompt": "Use the relocated synthetic voice to write a short notice about a fictional lamp. Python is available; the Quillgrain engine is not.",
+      "expected": [
+        "Read the selected relocated skill and context",
+        "Run scripts/voice_context.py without installing dependencies",
+        "Use scripts/lengths.py for any explicit budget",
+        "Do not claim full engine Schema or unavailable mechanical checks passed"
+      ]
+    }
+  ],
+  "variations": [
+    {
+      "id": "automatic",
+      "variation": "Omit the explicit skill invocation on an appropriate writing task; inspect the actual skill/context reads."
+    },
+    {
+      "id": "irrelevant",
+      "variation": "Ask for a code-only change; the writing skill should not be selected."
+    },
+    {
+      "id": "other-voice",
+      "variation": "Explicitly choose a second synthetic voice with distinct identity. Do not mix in the bundled default."
+    },
+    {
+      "id": "missing-pack",
+      "variation": "Ask for an absent named pack; record the concrete refusal/fallback without substitution."
+    },
+    {
+      "id": "denied-host",
+      "variation": "Supply a valid context approved only for another host; no voice application or permission expansion."
+    },
+    {
+      "id": "language-register",
+      "variation": "Request an unsupported language/register; do not relabel the context."
+    },
+    {
+      "id": "same-name",
+      "variation": "Two synthetic profiles with the same skill name in user/project scopes; record the actually selected path/profile for explicit and automatic calls. Use a disposable account/container, never replace personal skills."
+    }
+  ],
+  "record": [
+    "surface",
+    "client_version",
+    "model",
+    "effort",
+    "tools",
+    "isolation_limits",
+    "selected_skill_path",
+    "context_build_id",
+    "executed_commands",
+    "original_hash",
+    "result_hash",
+    "word_budget_result",
+    "routing_review",
+    "mechanical_review",
+    "prose_review"
+  ],
+  "prose_controls": [
+    "no_skill",
+    "short_instruction",
+    "full_skill"
+  ],
+  "ci_model_calls": false
+}

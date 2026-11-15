@@ -15,7 +15,7 @@ Deleting a source does not recall older exports. Use context pack/example lineag
 and rebuild dependent outputs after revocation. History cleanup is a separate task.
 
 `approved_model_hosts` records actual destinations (`offline`, `chatgpt`, `codex`,
-`ollama` are conventions, not authentication). Building an export does not send it.
+`claude`, `ollama` are conventions, not authentication). Building an export does not send it.
 Uploading a private context to a cloud model is a real transfer; inspect selected
 examples and permissions first. Host labels cannot verify where a human later pastes
 a file. Quillgrain has no telemetry and calls no model.

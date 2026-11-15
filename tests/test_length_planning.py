@@ -48,3 +48,11 @@ def test_portable_cli_plan_and_one_word_miss(tmp_path):
     assert run.returncode == 0 and '"min": 4' in run.stdout
     assert lengths.budget_report(['x ' * 19], minimum=20)['total']['status'] == 'UNDER'
     assert lengths.budget_report(['короткий ответ'])['status'] == 'PASS'
+
+
+def test_engine_cli_plan_exit_status(capsys):
+    from quillgrain.cli import main
+    assert main(['length', '--plan-next', '--next-range', '2:4', '--min-words', '3']) == 0
+    assert 'READY' in capsys.readouterr().out
+    assert main(['length', '--plan-next', '--next-range', '2:4', '--max-words', '1']) == 1
+    assert 'CONFLICT' in capsys.readouterr().out

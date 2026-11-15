@@ -1,24 +1,22 @@
 """Export only the already checked, derived context. No consumer mutation."""
-from importlib.resources import files
-from pathlib import Path
-from .contracts import verify_context
-from .io import QGError, sha, canonical, publish_bundle, digest
+from .io import QGError, sha, canonical, publish_bundle
+from .skills import SKILL_ROOTS, context_members, skill_members, skill_name, skill_path, verify_skill_context, validate_skill_tree
 
 
-def export(context, lock, output):
-    verify_context(context)
-    if digest(lock) != context['lock_digest']:
-        raise QGError('LOCK_DIGEST_MISMATCH', 3)
-    members = {'context.json': canonical(context), 'quillgrain.lock.json': canonical(lock)}
+def export(context, lock, output, *, name=None):
+    skill = context['target'] in SKILL_ROOTS
+    if skill:
+        verify_skill_context(context, context['target'], lock)
+        name = skill_name(context, name)
+    elif name is not None:
+        raise QGError('SKILL_NAME_TARGET_UNSUPPORTED', 3)
+    members = context_members(context, lock)
     if context["target"] == "patchpitch":
         from .consumer import bundle
         members['voice-bundle.json'] = canonical(bundle(context, lock))
-    header = (f"# Voice context\n\nBuild: `{context['build_id']}`\n\n"
-              f"Visibility: **{context['visibility']}** · Host: **{context['model_host']}**\n\n"
-              "Use the separate brief for all facts and canon. Review before sharing.\n\n")
-    members['VOICE_CONTEXT.md'] = (header + context['prompt_payload'] + '\n').encode('utf-8')
-    if context["target"] == "codex":
-        members['.agents/skills/quillgrain/SKILL.md'] = files('quillgrain').joinpath('resources/SKILL.md').read_bytes()
+    if context['target'] in SKILL_ROOTS:
+        prefix = skill_path(context['target'], name).as_posix() + '/'
+        members.update({prefix + rel: data for rel, data in skill_members(context, lock, name=name, agent=context['target']).items()})
     if context["target"] == "patchpitch-legacy":
         payload = context["prompt_payload"].encode("utf-8")
         if len(context["prompt_payload"]) > 1200:
@@ -28,4 +26,5 @@ def export(context, lock, output):
             "build_id": context["build_id"], "sha256": sha(payload), "codepoints": len(context["prompt_payload"]),
             "packs": context["packs"], "visibility": context["visibility"], "model_host": context["model_host"],
             "application": "manual existing voice_reference field", "preset": "record Warm/Clear/Lively in the run"})
-    publish_bundle(output, members)
+    publish_bundle(output, members, validator=(
+        (lambda root: validate_skill_tree(root / skill_path(context['target'], name), expected_name=name)) if skill else None))

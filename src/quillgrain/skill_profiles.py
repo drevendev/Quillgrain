@@ -125,7 +125,7 @@ def build(recipe_path, pack, bindings, output):
         raise QGError('SKILL_ASSET_INVALID')
     engine = files('quillgrain')
     helpers = {name: engine.joinpath(name).read_bytes() for name in
-               ('portable_context.py', 'lengths.py', 'skill_profiles.py', 'compose.py', 'contracts.py', 'io.py')}
+               ('portable.py', 'portable_context.py', 'lengths.py', 'skill_profiles.py', 'compose.py', 'contracts.py', 'io.py')}
     result = {}
     receipt = {'schema_version': 'quillgrain.skill-build/v1', 'recipe_digest': digest(recipe),
                'source_profiles': refs, 'engine_files': {k: sha(v) for k, v in helpers.items()}, 'hosts': {}}
@@ -173,6 +173,7 @@ def build(recipe_path, pack, bindings, output):
             write_json(root / 'voice.json', wrapper)
             members = {'SKILL.md': skill_text(recipe, host).encode('utf-8'),
                        'scripts/voice_context.py': helpers['portable_context.py'],
+                       'scripts/portable_runtime.py': helpers['portable.py'],
                        'scripts/lengths.py': helpers['lengths.py'], **assets}
             members['agents/openai.yaml'] = (
                 'interface:\n  display_name: ' + json.dumps(recipe['display_name'], ensure_ascii=False) +

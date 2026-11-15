@@ -65,6 +65,7 @@
       "offline",
       "chatgpt",
       "codex",
+      "claude",
       "ollama"
     ],
     "public_redistribution": true

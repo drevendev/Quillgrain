@@ -1,53 +1,11 @@
 """Canonical serialization and bounded, non-executing local IO."""
 
-import hashlib
-import json
-import math
 import os
 import shutil
 import stat
 import uuid
 from pathlib import Path, PureWindowsPath
-
-
-class QGError(Exception):
-    def __init__(self, code, exit_code=2, details=None):
-        super().__init__(code)
-        self.code = code
-        self.exit_code = exit_code
-        self.details = details or {}
-
-
-def canonical(value):
-    # qg-json-v1: sorted keys, compact separators, UTF-8, no NaN, trailing LF.
-    return (json.dumps(value, ensure_ascii=False, sort_keys=True,
-                       separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
-
-
-def digest(value):
-    return hashlib.sha256(canonical(value)).hexdigest()
-
-
-def sha(data):
-    return hashlib.sha256(data).hexdigest()
-
-
-def _strict_json(text):
-    def finite_float(token):
-        value = float(token)
-        if not math.isfinite(value):
-            raise QGError("NONFINITE_JSON")
-        return value
-
-    def pairs(items):
-        result = {}
-        for key, value in items:
-            if key in result:
-                raise QGError("DUPLICATE_JSON_KEY")
-            result[key] = value
-        return result
-    return json.loads(text, object_pairs_hook=pairs, parse_float=finite_float,
-                      parse_constant=lambda _: (_ for _ in ()).throw(QGError("NONFINITE_JSON")))
+from .portable import QGError, canonical, digest, sha, strict_json as _strict_json
 
 
 def read_json(path):
@@ -95,7 +53,7 @@ def safe_destination(path):
     return path
 
 
-def publish_bundle(output, members):
+def publish_bundle(output, members, *, validator=None):
     """Create-only bundle. Failed staging is never exposed as the final output."""
     output = safe_destination(output)
     if os.path.lexists(output):
@@ -116,6 +74,8 @@ def publish_bundle(output, members):
     try:
         for rel, data in files.items():
             write_bytes(staging / rel, data)
+        if validator is not None:
+            validator(staging)
         safe_destination(output)
         if os.path.lexists(output):
             raise QGError('OUTPUT_ALREADY_EXISTS', 3)

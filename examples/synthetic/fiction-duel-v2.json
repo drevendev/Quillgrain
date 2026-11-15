@@ -1,0 +1,321 @@
+{
+  "schema_version": "duel.quick-sources/v2",
+  "research": {
+    "question": "Can a candidate preserve the scene outcome while giving a useful narrative turn?",
+    "stage": "development",
+    "word_budget": {
+      "min": 20,
+      "max": 100
+    },
+    "context_policy": "Use one independent request per assigned condition; retain every raw attempt.",
+    "comparison_goal": "version_change",
+    "control_condition": "previous",
+    "controlled_factors": [
+      "model",
+      "brief",
+      "reasoning",
+      "examples"
+    ],
+    "limitations": [
+      "This fixture tests contracts, not literary quality. No model experiment has been run."
+    ]
+  },
+  "conditions": [
+    {
+      "id": "previous",
+      "kind": "model",
+      "model": "synthetic-writer-fixture",
+      "profile": "synthetic-voice@1",
+      "examples": "none",
+      "brief": "fiction-brief-v1",
+      "reasoning": "same-fixture-setting",
+      "session": "independent-request",
+      "profile_snapshot": {
+        "context_build_id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "packs": [
+          {
+            "id": "quillgrain.synthetic-fiction",
+            "version": "1.0.0",
+            "digest": "3333333333333333333333333333333333333333333333333333333333333333"
+          }
+        ]
+      }
+    },
+    {
+      "id": "candidate",
+      "kind": "model",
+      "model": "synthetic-writer-fixture",
+      "profile": "synthetic-voice@2",
+      "examples": "none",
+      "brief": "fiction-brief-v1",
+      "reasoning": "same-fixture-setting",
+      "session": "independent-request",
+      "profile_snapshot": {
+        "context_build_id": "2222222222222222222222222222222222222222222222222222222222222222",
+        "packs": [
+          {
+            "id": "quillgrain.synthetic-fiction",
+            "version": "2.0.0",
+            "digest": "4444444444444444444444444444444444444444444444444444444444444444"
+          }
+        ]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "scene-0",
+      "work_id": "synthetic-work-0",
+      "group": "choice",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 0 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    },
+    {
+      "id": "scene-1",
+      "work_id": "synthetic-work-1",
+      "group": "discovery",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 1 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    },
+    {
+      "id": "scene-2",
+      "work_id": "synthetic-work-2",
+      "group": "choice",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 2 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    },
+    {
+      "id": "scene-3",
+      "work_id": "synthetic-work-3",
+      "group": "discovery",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 3 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    },
+    {
+      "id": "scene-4",
+      "work_id": "synthetic-work-4",
+      "group": "choice",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 4 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    },
+    {
+      "id": "scene-5",
+      "work_id": "synthetic-work-5",
+      "group": "discovery",
+      "split": "development",
+      "task_kind": "new_scene",
+      "source_text": null,
+      "fact_pack": {
+        "characters": [
+          {
+            "id": "Mira",
+            "relations": [
+              "Knows the night keeper"
+            ],
+            "knowledge": [
+              "The bell was silent before she arrived"
+            ]
+          }
+        ],
+        "action": "Mira opens locker 5 in a fictional observatory.",
+        "conflict": "The keeper needs the key before dawn; Mira wants an explanation.",
+        "facts": [
+          "The locker holds a brass key and a sealed envelope.",
+          "No one has opened the envelope."
+        ],
+        "stop": "Mira gives the keeper the key but keeps the envelope sealed.",
+        "information_status": "fictional",
+        "document_form": "scene"
+      },
+      "purpose": "Write a self-contained fictional scene using the shared facts; stop at the stated outcome. Use the meanings, not field labels or editorial directions.",
+      "rights": {
+        "reviewed": true,
+        "basis": "Original synthetic fixture for engine checks",
+        "evidence_ref": "synthetic-fixture-receipt",
+        "permitted_uses": [
+          "local_evaluation",
+          "public_redistribution"
+        ]
+      },
+      "meaning_reviewed": true,
+      "authorship": "synthetic_ai_prepared"
+    }
+  ],
+  "reference_work_ids": [],
+  "quotas": null
+}

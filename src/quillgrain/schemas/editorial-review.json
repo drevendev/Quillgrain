@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "quillgrain.editorial-review/v1"
+    },
+    "context_build_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "draft_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "register": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "registers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "characters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "channel": {
+                "enum": [
+                  "all",
+                  "narration",
+                  "dialogue"
+                ]
+              }
+            }
+          },
+          "applicability": {
+            "enum": [
+              "AVAILABLE",
+              "CHARACTER_SCOPE_UNAVAILABLE"
+            ]
+          },
+          "status": {
+            "const": "NOT_REVIEWED"
+          }
+        },
+        "required": [
+          "rule_id",
+          "instruction",
+          "language",
+          "register",
+          "tags",
+          "scope",
+          "applicability",
+          "status"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "context_build_id",
+    "draft_sha256",
+    "items"
+  ]
+}

@@ -270,7 +270,12 @@ def serve(blind_path, *, port=8767):
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from importlib.resources import files
     blind = verify_frozen(read_json(blind_path))
-    if blind.get('schema_version') == 'duel.pair-blind/v2':
+    quick = blind.get('schema_version') in ('duel.quick-blind/v1', 'duel.quick-blind/v2')
+    if quick:
+        from .quickduel import validate_blind, browser_html
+        validate_blind(blind)
+        asset_dir = 'web_quick'
+    elif blind.get('schema_version') == 'duel.pair-blind/v2':
         from .pairwise import validate_blind
         validate_blind(blind)
         asset_dir = 'web_pairwise'
@@ -282,6 +287,8 @@ def serve(blind_path, *, port=8767):
               '/app.js':('text/javascript; charset=utf-8', lambda:assets.joinpath('app.js').read_bytes()),
               '/styles.css':('text/css; charset=utf-8', lambda:assets.joinpath('styles.css').read_bytes()),
               '/session.json':('application/json; charset=utf-8', canonical(blind))}
+    if quick:
+        routes['/'] = ('text/html; charset=utf-8', lambda:browser_html(blind, standalone=False))
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.headers.get('Host') not in (f'127.0.0.1:{port}',f'localhost:{port}'):

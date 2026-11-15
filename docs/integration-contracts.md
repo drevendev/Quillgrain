@@ -1,14 +1,30 @@
 # Existing tools remain owners of their behavior
 
-The engine exports context, not consumer installation. Task facts, canon, character
+Pack builds export context. Explicit `qg skill install` installs an agent skill only
+into the caller-selected project or new directory. Task facts, canon, character
 identity, UI format, publication and distribution stay with the requesting project.
 A style example is never evidence for a factual claim or a first-person experience.
 
 ChatGPT receives `VOICE_CONTEXT.md` and `context.json` beside a separate brief.
-Codex receives the same data and a generic `.agents/skills/quillgrain/SKILL.md`,
-following the [official skill format](https://learn.chatgpt.com/docs/build-skills).
-Copy an export into a consumer only under that consumer's explicit authorization.
-No global Codex configuration is modified. The exported skill contains no private data.
+Codex receives `.agents/skills/quillgrain/`; Claude Code receives
+`.claude/skills/quillgrain/`. These share portable `SKILL.md` instructions following
+the [Codex format](https://learn.chatgpt.com/docs/build-skills) and
+[Claude format](https://code.claude.com/docs/en/skills). The current assistant writes
+and edits; the skill does not invoke a local model or require an API key.
+
+A generic installation contains only instructions, CLI guidance, and Codex UI
+metadata. A voice-bound export or installation additionally embeds the verified
+context, readable Markdown, and lock under `references/`. Those derived files can
+contain private data and retain the context's visibility and host restrictions.
+Copy the whole skill directory to move it independently of its original export.
+Supplied bundle code and unverified Markdown are never copied by the installer.
+
+`qg context verify --context FILE --host ACTUAL_HOST --lock LOCK` checks context
+integrity, retrieval/host permissions, and lock digest before use. Bound installation
+requires the chosen agent to match the recorded host. The `claude` target defaults
+to host `claude`; it does not add Claude to existing pack/source allowlists. Existing
+private approvals are preserved. No global configuration is modified. See the
+[installation guide](agent-skills.md) for commands and surface limitations.
 
 The legacy announcement adapter supplies `voice_reference.txt` (Python `len()` <=
 1,200) plus a digest/visibility manifest. This measures Unicode codepoints, not UTF-8

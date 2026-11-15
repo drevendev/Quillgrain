@@ -113,6 +113,13 @@ def test_shared_digest_vectors(inputs):
             verify(bad, 'codex', lock)
     with pytest.raises(ValueError, match='LOCK_DIGEST_MISMATCH'):
         verify(context, 'codex', {**lock, 'engine_version': 'different'})
+    bad = copy.deepcopy(context)
+    bad['rules_applied'][0]['scope']['languages'] = ['en']
+    bad['build_id'] = digest({k: v for k, v in bad.items() if k != 'build_id'})
+    with pytest.raises(QGError, match='CONTEXT_RULE_SCOPE'):
+        verify_context(bad)
+    with pytest.raises(ValueError, match='CONTEXT_RULE_SCOPE'):
+        verify(bad, 'codex', lock)
 
 
 def test_recipe_pins_and_compare_without_installing(inputs):
