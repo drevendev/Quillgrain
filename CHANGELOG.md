@@ -19,6 +19,12 @@ installation, host/lock verification, shared writing instructions, and Codex UI
 metadata. Bound skills carry their context and lock so they survive relocation.
 Generic installs contain no voice data; existing host permissions are preserved.
 
+## Unreleased — local IO repairs
+
+Apply duplicate-key and nonfinite-value rejection to corpus selection JSONL as
+well as JSON. Remove transaction-owned bundle staging after handled write or
+publication failures, preserving existing destinations and the original error.
+
 ## 0.1.0rc4 — versioned private corpus resources
 
 Adds private corpus/source/fragment schemas, explicit storage approval, immutable
